@@ -1,0 +1,43 @@
+{
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Debug All (Next.js + NestJS + React Native)",
+      "configurations": ["Next.js", "NestJS", "React Native"]
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Next.js",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 9229,
+      "skipFiles": ["<node_internals>/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "NestJS",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:debug"],
+      "port": 9229,
+      "autoAttachChildProcesses": true,
+      "internalConsoleOptions": "openOnSessionStart",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "React Native",
+      "type": "reactnative",
+      "request": "launch",
+      "name": "React Native",
+      "cwd": "${workspaceFolder}/apps/mobile",
+      "platform": "android",
+      "sourceMaps": true
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Poppins, Satisfy } from "next/font/google";
+import NavbarWrapper from "@/components/NavbarWrapper";
 import "../styles/globals.css";
-import '@fortawesome/fontawesome-free/css/all.min.css';
-
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,6 +13,17 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-poppins",
+});
+const satisfy = Satisfy({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-satisfy",
 });
 
 const siteUrl =
@@ -55,10 +66,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body
+      {/* <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      > */}
+      <body className={`${poppins.variable} ${satisfy.variable} font-sans`}>
+        <NavbarWrapper>{children}</NavbarWrapper>
       </body>
     </html>
   );

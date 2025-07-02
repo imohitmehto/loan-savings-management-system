@@ -7,14 +7,15 @@ import appConfig from "./config/app.config";
 import { validationSchema } from "./config/validation";
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    isGlobal: true,
-    load: [appConfig],
-    validationSchema,
-  }),
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [appConfig],
+      validationSchema,
+    }),
     PrismaModule,
     AuthModule,
-    UserModule
+    UserModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

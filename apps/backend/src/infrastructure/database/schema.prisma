@@ -8,22 +8,230 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  password       String
-  name           String?
-  role           Role     @default(USER)
-  isVerified     Boolean  @default(false)
-  otp            String?
-  otpExpiresAt   DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
 enum Role {
   ADMIN
-  CONTINBUTER
-  MANAGER
-  USER
+  STAFF
+  CUSTOMER
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  DEFAULTED
+}
+
+enum RepaymentStatus {
+  PENDING
+  PAID
+  LATE
+}
+
+enum ReportType {
+  LEDGER
+  YEARLY
+  ACCOUNT_HISTORY
+}
+
+enum OTPType {
+  EMAIL
+  SMS
+}
+
+model User {
+  id         String   @id @default(uuid())
+  fullName   String?
+  name       String
+  email      String   @unique
+  phone      String   @unique
+  password   String
+  isVerified Boolean  @default(false)
+  role       Role     @default(CUSTOMER)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  otps       OTP[]
+  accounts   Account[]
+  loans      Loan[]
+  auditLogs  AuditLog[]
+  reports    Report[]
+  addresses  Address[]
+}
+
+model OTP {
+  id         String   @id @default(uuid())
+  code       String
+  type       OTPType
+  userId     String
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  street     String?
+  city       String
+  district   String
+  state      String
+  pincode    String?
+  landmark   String?
+  createdAt  DateTime @default(now())
+
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+
+  accountId  String?
+  account    Account?  @relation(fields: [accountId], references: [id])
+}
+
+model Account {
+  id             String              @id @default(uuid())
+  accountNumber  String              @unique
+  type           AccountType
+  balance        Float               @default(0)
+  status         String
+  openedAt       DateTime            @default(now())
+  closedAt       DateTime?
+
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+
+  groupId        String?
+  group          AccountGroup?       @relation(fields: [groupId], references: [id])
+
+  transactions   Transaction[]
+  profitShares   ProfitDistribution[]
+  addresses      Address[]
+}
+
+model AccountGroup {
+  id       String               @id @default(uuid())
+  name     String
+  accounts Account[]
+  profits  ProfitDistribution[]
+}
+
+model Transaction {
+  id          String         @id @default(uuid())
+  amount      Float
+  type        TransactionType
+  description String?
+  createdAt   DateTime       @default(now())
+
+  accountId   String
+  account     Account        @relation(fields: [accountId], references: [id])
+}
+
+model Loan {
+  id             String       @id @default(uuid())
+  loanNumber     String       @unique
+  principal      Float
+  interestRate   Float
+  durationMonths Int
+  emiAmount      Float
+  startDate      DateTime
+  endDate        DateTime
+  status         LoanStatus
+
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  loanTypeId     String
+  loanType       LoanType     @relation(fields: [loanTypeId], references: [id])
+
+  policyId       String
+  policy         LoanPolicy   @relation(fields: [policyId], references: [id])
+
+  repayments     Repayment[]
+}
+
+model Repayment {
+  id        String          @id @default(uuid())
+  dueDate   DateTime
+  paidDate  DateTime?
+  amount    Float
+  status    RepaymentStatus
+
+  loanId    String
+  loan      Loan            @relation(fields: [loanId], references: [id])
+}
+
+model LoanType {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  interestRate Float
+  maxAmount    Float
+  minAmount    Float
+
+  loans        Loan[]
+}
+
+model LoanPolicy {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  minCreditScore  Int
+  maxLoanAmount   Float
+  rules           Json
+
+  loans           Loan[]
+}
+
+model LoanCalculatorInput {
+  id            String   @id @default(uuid())
+  principal     Float
+  interestRate  Float
+  duration      Int
+  calculatedEmi Float
+  createdAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  metadata  Json
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Report {
+  id        String      @id @default(uuid())
+  type      ReportType
+  data      Json
+  createdAt DateTime    @default(now())
+
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+}
+
+model ProfitDistribution {
+  id            String         @id @default(uuid())
+  year          Int
+  totalProfit   Float
+  perAccount    Float
+  distributedAt DateTime
+
+  accountId     String
+  account       Account        @relation(fields: [accountId], references: [id])
+
+  groupId       String?
+  group         AccountGroup?  @relation(fields: [groupId], references: [id])
 }

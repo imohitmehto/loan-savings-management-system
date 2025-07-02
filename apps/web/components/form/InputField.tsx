@@ -23,7 +23,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
         {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
       </div>
     );
-  }
+  },
 );
 
 InputField.displayName = "InputField";

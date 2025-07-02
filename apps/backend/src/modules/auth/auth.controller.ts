@@ -1,28 +1,39 @@
-// src/modules/auth/auth.controller.ts
-import { Body, Controller, Post, UnauthorizedException } from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { LoginDto, RegisterDto } from "./dto";
-import { UserService } from "../user/user.service";
+// src/modules/auth/controllers/auth.controller.ts
+import { Body, Controller, Post, UseGuards, Request } from "@nestjs/common";
+import { AuthService } from "../services/auth.service";
+import { RegisterDto } from "../dto/register.dto";
+import { LoginDto } from "../dto/login.dto";
+import { VerifyOtpDto } from "../dto/verify-otp.dto";
+import { ResendOtpDto } from "../dto/resend-otp.dto";
+import { JwtAuthGuard } from "../guards/jwt-auth.guard";
 
 @Controller("auth")
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    private userService: UserService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post("register")
-  async register(@Body() dto: RegisterDto) {
-    const user = await this.userService.createUser(dto);
-    return this.authService.login(user);
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Post("verify-otp")
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post("resend-otp")
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendOtp(dto);
   }
 
   @Post("login")
-  async login(@Body() dto: LoginDto) {
-    const user = await this.authService.validateUser(dto.email, dto.password);
-    if (!user) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
-    return this.authService.login(user);
+  login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("me")
+  me(@Request() req) {
+    return this.authService.me(req.user.id);
   }
 }

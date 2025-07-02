@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import axios from 'axios';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import axios from "axios";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -12,18 +12,18 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({ success: true });
 
     // Set HttpOnly secure cookie
-    response.cookies.set('access_token', token, {
+    response.cookies.set("access_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
       maxAge: 60 * 60 * 24, // 1 day
     });
 
     return response;
   } catch (err: any) {
     return NextResponse.json(
-      { message: err?.response?.data?.message || 'Login failed' },
-      { status: 401 }
+      { message: err?.response?.data?.message || "Login failed" },
+      { status: 401 },
     );
   }
 }

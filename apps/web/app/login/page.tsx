@@ -7,9 +7,10 @@ import { LoginInput } from "@/types/auth";
 import { useState } from "react";
 import axios from "@/lib/axios";
 import Image from "next/image";
-import Logo from "@/public/images/avatar.png";
+import Logo from "@/public/images/logo.jpg";
 import InputField from "@/components/form/InputField";
 import { useRouter } from "next/navigation";
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,17 +27,18 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginInput) => {
     setLoading(true);
     setServerError("");
-
-    try {
-      const res = await axios.post("/api/login", data);
-      if (res.status === 200) {
-        router.push("/home");
-      }
-    } catch (err: any) {
-      setServerError(err.response?.data?.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
+    router.push("/home");
+    // try {
+    //   const res = await axios.post("/api/login", data);
+    //   if (res.status === 200) {
+    //     router.push("/home");
+    //   }
+    // } catch (err: any) {
+    //   setServerError(err.response?.data?.message || "Something went wrong.");
+    // } finally {
+    //   setLoading(false);
+    // }
+    // }
   };
 
   return (
@@ -100,7 +102,7 @@ export default function LoginPage() {
       <footer className="absolute bottom-4 text-xs text-gray-300">
         Developed by{" "}
         <a href="#" className="hover:text-white">
-          Mohit Mehto ❣️
+          Mohit Mehto 🤍
         </a>
       </footer>
     </main>

@@ -9,7 +9,7 @@ import rateLimit from "express-rate-limit";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix("api");
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
@@ -52,7 +52,5 @@ async function bootstrap() {
   const port = configService.get<number>("PORT") || 5000;
   await app.listen(port);
   logger.log(`🚀 Server is running on http://localhost:${port}`);
-
-  // await app.listen(process.env.PORT ?? 5000);
 }
 bootstrap();

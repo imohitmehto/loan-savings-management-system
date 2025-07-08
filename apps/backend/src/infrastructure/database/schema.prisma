@@ -45,24 +45,19 @@ enum ReportType {
   ACCOUNT_HISTORY
 }
 
-enum OTPType {
-  EMAIL
-  SMS
-}
-
 model User {
   id         String   @id @default(uuid())
   fullName   String?
   name       String
   email      String   @unique
-  phone      String   @unique
+  phone      String  
   password   String
   isVerified Boolean  @default(false)
   role       Role     @default(CUSTOMER)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  otps       OTP[]
+  otps       Otp[]
   accounts   Account[]
   loans      Loan[]
   auditLogs  AuditLog[]
@@ -70,16 +65,18 @@ model User {
   addresses  Address[]
 }
 
-model OTP {
-  id         String   @id @default(uuid())
-  code       String
-  type       OTPType
-  userId     String
-  verified   Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+model Otp {
+  id          String   @id @default(uuid())
+  email       String?
+  phone       String?
+  code        String
+  expiresAt   DateTime
+  userId      String
+  resendCount Int      @default(0)
+  lastSentAt  DateTime
+  createdAt   DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Address {

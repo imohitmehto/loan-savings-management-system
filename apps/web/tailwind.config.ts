@@ -8,13 +8,11 @@ module.exports = {
     ],
   theme: {
     extend: {
-    //   colors: {
-    //     navbar: '#121212',
-    //     navitem: '#1f1f1f',
-    //   },
       colors: {
-      primary: '#1e40af', 
-    },
+        navbar: '#121212',
+        navitem: '#1f1f1f',
+      },
+   
     },
   },
   plugins: [],

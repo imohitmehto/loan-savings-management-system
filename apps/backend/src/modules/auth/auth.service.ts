@@ -1,135 +1,144 @@
-// // src/modules/auth/auth.service.ts
 import {
   Injectable,
-  UnauthorizedException,
   BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UserService } from "../user/user.service";
-import * as bcrypt from "bcrypt";
-import { RegisterDto, LoginDto } from "./dto";
+import { RegisterDto, LoginDto } from "./dtos";
+import { Hash } from "src/common/utils/hash.util";
+import { OtpService } from "src/modules/otp/otp.service";
+import { LoggerService } from "../../infrastructure/logger/logger.service";
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private userService: UserService,
+    private hashService: Hash,
+    private otpService: OtpService,
+    private logger: LoggerService,
   ) { }
 
-  async register(dto: RegisterDto) {
-    const user = await this.userService.findByEmail(dto.email);
-    if (user) throw new BadRequestException("User already exists");
+  async register(dto: RegisterDto): Promise<{ message: string }> {
+    const { name, email, phone, password } = dto;
 
-    const hashed = await bcrypt.hash(dto.password, 10);
-    const newUser = await this.userService.createUser({
-      ...dto,
-      password: hashed,
+    // Check for existing user
+    const existingUser = await this.userService.findByEmail(email);
+    if (existingUser) {
+      throw new BadRequestException(`User with email ${email} already exists`);
+    }
+
+    // Hash the password securely
+    const hashedPassword = await this.hashService.hashPassword(password);
+
+    // Format phone number with +91 if not already present
+    const formattedPhone = this.formatPhoneNumber(phone);
+
+    // Create user
+    const createdUser = await this.userService.createUser({
+      name,
+      email,
+      phone: formattedPhone,
+      password: hashedPassword,
     });
 
-    await this.otpService.sendOtp(newUser.email);
-    return { message: "OTP sent to email" };
+    // Send OTP (email & phone)
+    try {
+      await this.otpService.sendOtp(createdUser.id, email, formattedPhone);
+      this.logger.log(`OTP sent to ${email} and ${formattedPhone}`);
+    } catch (err) {
+      this.logger.error(`Failed to send OTP to ${email}`, err);
+      throw new InternalServerErrorException(
+        "Failed to send OTP. Please try again later.",
+      );
+    }
+
+    return { message: "OTP sent successfully" };
   }
 
-  async verifyOtp(dto: VerifyOtpDto) {
-    const valid = await this.otpService.verifyOtp(dto.emailOrPhone, dto.otp);
-    if (!valid) throw new BadRequestException("Invalid or expired OTP");
+  async verify(email: string, otp: string): Promise<{ message: string }> {
+    const success = await this.otpService.verifyOtp(email, otp);
+    if (!success) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
 
-    await this.userService.verifyUser(dto.emailOrPhone);
-    return { message: "Account verified successfully" };
+    const user = await this.userService.findByEmail(email);
+    const userId = user!.id;
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    await this.userService.updateUser(userId, { isVerified: true });
+
+    return { message: 'Account verified successfully' };
   }
 
-  async resendOtp(dto: ResendOtpDto) {
-    const user = await this.userService.findByEmailOrPhone(dto.emailOrPhone);
+  async resendOtp(data: { id: string }): Promise<{ message: string }> {
+    const user = await this.userService.findById(data.id);
     if (!user) throw new NotFoundException("User not found");
 
-    await this.otpService.sendOtp(user);
+    await this.otpService.sendOtp(user.id, user.email, user.phone);
     return { message: "OTP resent successfully" };
   }
 
-  async login(dto: LoginDto) {
+
+  async login(dto: LoginDto): Promise<{
+    accessToken: string;
+    user: { id: string; name: string; email: string }
+  }> {
     const user = await this.userService.findByEmail(dto.email);
-    if (!user || !user.isVerified)
-      throw new UnauthorizedException("User not found or not verified");
+    if (!user || !(await this.hashService.comparePasswords(dto.password, user.password)))
+      throw new UnauthorizedException('Invalid credentials');
+    if (!user.isVerified) throw new UnauthorizedException('Email not verified');
 
-    const valid = await bcrypt.compare(dto.password, user.password);
-    if (!valid) throw new UnauthorizedException("Invalid credentials'");
+    const payload = { sub: user.id, email: user.email, role: user.role };
 
-    const payload = { sub: user.id, email: user.email };
-    const token = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload);
 
-    return { access_token: token };
-  }
-
-  async validateOtp(dto: ValidateOtpDto) {
-    const valid = await this.otpService.verifyOtp(dto.email, dto.otp);
-    if (!valid) throw new UnauthorizedException("Invalid OTP");
-    await this.userService.activateUser(dto.email);
-    return { message: "User verified successfully" };
-  }
-
-  async register(dto: RegisterDto) {
-
-    const hash = await bcrypt.hash(dto.password, 10);
-    const otpCode = generateOtp(); // e.g., 6-digit code
-    const otpExpiresAt = dayjs().add(10, 'minutes').toDate();
-
-    const user = await this.prisma.user.create({
-      data: {
-        ...dto,
-        password: hash,
-        otpCode,
-        otpExpiresAt,
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
       },
-    });
-
-    if (dto.email) await this.mailService.sendOtp(dto.email, otpCode);
-    if (dto.phone) await this.smsService.sendOtp(dto.phone, otpCode);
-
-    return { message: 'OTP sent. Please verify your account.' };
+    };
   }
 
-  async verifyOtp(dto: VerifyOtpDto) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: dto.email },
-          { phone: dto.phone },
-        ],
-      },
-    });
+  private formatPhoneNumber(phone: string): string {
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, "");
 
-    if (!user || user.otpCode !== dto.otpCode || user.otpExpiresAt < new Date()) {
-      throw new BadRequestException('Invalid or expired OTP.');
+    // If already starts with +91, return as is
+    if (digits.startsWith("91") && digits.length === 12) {
+      return `+${digits}`;
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        isVerified: true,
-        otpCode: null,
-        otpExpiresAt: null,
-      },
-    });
+    // If 10 digits, assume Indian local number and add +91
+    if (digits.length === 10) {
+      return `+91${digits}`;
+    }
 
-    return { message: 'Account verified successfully.' };
+    // If format is unexpected, throw error
+    throw new BadRequestException("Invalid phone number format");
   }
 
-  async login(dto: LoginDto) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: dto.emailOrPhone },
-          { phone: dto.emailOrPhone },
-        ],
-      },
-    });
+  async me(userId: string) {
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-    if (!user || !user.isVerified) throw new UnauthorizedException('User not verified');
-    const passwordMatch = await bcrypt.compare(dto.password, user.password);
-    if (!passwordMatch) throw new UnauthorizedException('Invalid credentials');
-
-    const token = this.jwtService.sign({ sub: user.id, role: user.role });
-    return { accessToken: token };
+    // Return only safe user data
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+    };
   }
-
 }

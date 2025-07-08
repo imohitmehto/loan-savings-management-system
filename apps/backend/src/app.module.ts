@@ -4,7 +4,9 @@ import { PrismaModule } from "./infrastructure/database/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { UserModule } from "./modules/user/user.module";
 import appConfig from "./config/app.config";
-import { validationSchema } from "./config/validation";
+import { validationSchema } from "./common/validations/joi/validationSchema";
+import { LoggerModule } from "./infrastructure/logger/logger.module";
+import { OtpModule } from './modules/otp/otp.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { validationSchema } from "./config/validation";
     PrismaModule,
     AuthModule,
     UserModule,
+    LoggerModule,
+    OtpModule,
   ],
 })
 export class AppModule {}

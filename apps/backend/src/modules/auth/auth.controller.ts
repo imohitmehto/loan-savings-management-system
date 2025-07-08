@@ -1,39 +1,47 @@
-// src/modules/auth/controllers/auth.controller.ts
-import { Body, Controller, Post, UseGuards, Request } from "@nestjs/common";
-import { AuthService } from "../services/auth.service";
-import { RegisterDto } from "../dto/register.dto";
-import { LoginDto } from "../dto/login.dto";
-import { VerifyOtpDto } from "../dto/verify-otp.dto";
-import { ResendOtpDto } from "../dto/resend-otp.dto";
-import { JwtAuthGuard } from "../guards/jwt-auth.guard";
+// src/modules/auth/auth.controller.ts
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  Request,
+  Get,
+  HttpCode,
+} from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { RegisterDto, LoginDto } from './dtos';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
-@Controller("auth")
+@Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
-  @Post("register")
+  @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
-  @Post("verify-otp")
-  verifyOtp(@Body() dto: VerifyOtpDto) {
-    return this.authService.verifyOtp(dto);
+  @Post('verify-otp')
+  verifyOtp(@Body() body: { email: string; otp: string }) {
+    return this.authService.verify(body.email, body.otp);
   }
 
-  @Post("resend-otp")
-  resendOtp(@Body() dto: ResendOtpDto) {
-    return this.authService.resendOtp(dto);
+  @Post('resend-otp')
+  resendOtp(@Body() body: { id: string }) {
+    return this.authService.resendOtp({ id: body.id });
   }
 
-  @Post("login")
+
+  @Post('login')
+  @HttpCode(200)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+
   @UseGuards(JwtAuthGuard)
-  @Post("me")
+  @Get('me')
   me(@Request() req) {
-    return this.authService.me(req.user.id);
+    return this.authService.me(req.user.userId);
   }
 }

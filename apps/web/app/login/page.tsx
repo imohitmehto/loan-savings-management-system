@@ -2,15 +2,14 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "@/lib/validators";
+import { loginSchema } from "@/lib/validators/loginSchema";
 import { LoginInput } from "@/types/auth";
 import { useState } from "react";
-import axios from "@/lib/axios";
 import Image from "next/image";
 import Logo from "@/public/images/logo.jpg";
 import InputField from "@/components/form/InputField";
 import { useRouter } from "next/navigation";
-
+import api from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,24 +22,31 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
-  const onSubmit = async (data: LoginInput) => {
-    setLoading(true);
-    setServerError("");
+ const onSubmit = async (data: LoginInput) => {
+  setLoading(true);
+  setServerError("");
+
+  try {
+    const res = await api.post("/auth/login", data);
+
+    const token = res.data.accessToken;
+    if (!token) throw new Error("Token not returned");
+
+    if (rememberMe) {
+      localStorage.setItem("accessToken", token);
+    } else {
+      sessionStorage.setItem("accessToken", token);
+    }
+
     router.push("/home");
-    // try {
-    //   const res = await axios.post("/api/login", data);
-    //   if (res.status === 200) {
-    //     router.push("/home");
-    //   }
-    // } catch (err: any) {
-    //   setServerError(err.response?.data?.message || "Something went wrong.");
-    // } finally {
-    //   setLoading(false);
-    // }
-    // }
-  };
-
+  } catch (err: any) {
+    setServerError(err.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <main
       className="min-h-screen flex flex-col justify-center items-center bg-cover bg-center relative"
@@ -82,7 +88,12 @@ export default function LoginPage() {
 
         <div className="flex justify-between items-center text-sm mb-4 text-black">
           <label className="flex items-center space-x-2">
-            <input type="checkbox" className="form-checkbox" />
+            <input
+              type="checkbox"
+              className="form-checkbox"
+              checked={rememberMe}
+              onChange={() => setRememberMe(!rememberMe)}
+            />
             <span>Remember me</span>
           </label>
           <a href="#" className="hover:underline">

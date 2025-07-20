@@ -99,6 +99,7 @@ model Address {
 model Account {
   id             String              @id @default(uuid())
   accountNumber  String              @unique
+  name           String
   type           AccountType
   balance        Float               @default(0)
   status         String

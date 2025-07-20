@@ -6,7 +6,8 @@ import { UserModule } from "./modules/user/user.module";
 import appConfig from "./config/app.config";
 import { validationSchema } from "./common/validations/joi/validationSchema";
 import { LoggerModule } from "./infrastructure/logger/logger.module";
-import { OtpModule } from './modules/otp/otp.module';
+import { OtpModule } from "./modules/otp/otp.module";
+import { AccountModule } from "./modules/account/account.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OtpModule } from './modules/otp/otp.module';
     UserModule,
     LoggerModule,
     OtpModule,
+    AccountModule,
   ],
 })
 export class AppModule {}

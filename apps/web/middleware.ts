@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("access_token");
   const isLoggedIn = Boolean(token);
-  const isProtected = request.nextUrl.pathname.startsWith("/admin");
+  const isProtected = request.nextUrl.pathname.startsWith("/dashboard");
 
   if (isProtected && !isLoggedIn) {
     return NextResponse.redirect(new URL("/login", request.url));

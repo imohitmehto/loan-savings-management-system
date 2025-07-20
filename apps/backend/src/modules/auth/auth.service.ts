@@ -11,16 +11,27 @@ import { RegisterDto, LoginDto } from "./dtos";
 import { Hash } from "src/common/utils/hash.util";
 import { OtpService } from "src/modules/otp/otp.service";
 import { LoggerService } from "../../infrastructure/logger/logger.service";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthService {
+  private expiresIn: string;
+  private refreshSecret: string;
+  private refreshExpiresIn: string;
+
   constructor(
     private jwtService: JwtService,
     private userService: UserService,
     private hashService: Hash,
     private otpService: OtpService,
     private logger: LoggerService,
-  ) { }
+    private readonly config: ConfigService,
+  ) {
+    const jwt = this.config.get("jwt");
+    this.expiresIn = jwt.expiresIn;
+    this.refreshSecret = jwt.refreshSecret;
+    this.refreshExpiresIn = jwt.refreshExpiresIn;
+  }
 
   async register(dto: RegisterDto): Promise<{ message: string }> {
     const { name, email, phone, password } = dto;
@@ -62,17 +73,17 @@ export class AuthService {
   async verify(email: string, otp: string): Promise<{ message: string }> {
     const success = await this.otpService.verifyOtp(email, otp);
     if (!success) {
-      throw new BadRequestException('Invalid or expired OTP');
+      throw new BadRequestException("Invalid or expired OTP");
     }
 
     const user = await this.userService.findByEmail(email);
     const userId = user!.id;
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException("User not found");
     }
     await this.userService.updateUser(userId, { isVerified: true });
 
-    return { message: 'Account verified successfully' };
+    return { message: "Account verified successfully" };
   }
 
   async resendOtp(data: { id: string }): Promise<{ message: string }> {
@@ -83,22 +94,40 @@ export class AuthService {
     return { message: "OTP resent successfully" };
   }
 
-
   async login(dto: LoginDto): Promise<{
     accessToken: string;
-    user: { id: string; name: string; email: string }
+    refreshToken: string;
+    user: { id: string; name: string; email: string };
   }> {
     const user = await this.userService.findByEmail(dto.email);
-    if (!user || !(await this.hashService.comparePasswords(dto.password, user.password)))
-      throw new UnauthorizedException('Invalid credentials');
-    if (!user.isVerified) throw new UnauthorizedException('Email not verified');
+
+    if (
+      !user ||
+      !(await this.hashService.comparePasswords(dto.password, user.password))
+    ) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    if (!user.isVerified) {
+      throw new UnauthorizedException("Email not verified");
+    }
 
     const payload = { sub: user.id, email: user.email, role: user.role };
 
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.expiresIn,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.refreshExpiresIn,
+      secret: this.refreshSecret,
+    });
+
+    // await this.userService.updateRefreshToken(user.id, refreshToken);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         name: user.name,
@@ -128,7 +157,7 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.userService.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Return only safe user data

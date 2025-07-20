@@ -12,7 +12,7 @@ export class OtpService {
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
     private readonly hashService: Hash,
-  ) { }
+  ) {}
 
   /**
    * Generates 6-digit OTP, saves to DB, and sends via email & SMS

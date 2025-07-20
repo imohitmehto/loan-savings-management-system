@@ -1,17 +1,24 @@
-import { Module } from '@nestjs/common';
-import { OtpController } from './otp.controller';
-import { MailService } from 'src/infrastructure/mail/mail.service';
-import { SmsService } from 'src/infrastructure/sms/sms.service';
-import { LoggerModule } from 'src/infrastructure/logger/logger.module';
-import { Hash } from 'src/common/utils/hash.util';
-import { PrismaService } from 'src/infrastructure/database/prisma.service';
-import { OtpService } from './otp.service';
-import { EmailTemplates } from 'src/common/utils/template.util';
+import { Module } from "@nestjs/common";
+import { OtpController } from "./otp.controller";
+import { MailService } from "src/infrastructure/mail/mail.service";
+import { SmsService } from "src/infrastructure/sms/sms.service";
+import { LoggerModule } from "src/infrastructure/logger/logger.module";
+import { Hash } from "src/common/utils/hash.util";
+import { PrismaService } from "src/infrastructure/database/prisma.service";
+import { OtpService } from "./otp.service";
+import { EmailTemplates } from "src/common/utils/template.util";
 
 @Module({
   imports: [LoggerModule],
-  providers: [PrismaService, SmsService, MailService, Hash, OtpService, EmailTemplates],
+  providers: [
+    PrismaService,
+    SmsService,
+    MailService,
+    Hash,
+    OtpService,
+    EmailTemplates,
+  ],
   controllers: [OtpController],
   exports: [OtpService],
 })
-export class OtpModule { }
+export class OtpModule {}

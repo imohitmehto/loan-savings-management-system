@@ -4,15 +4,32 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/validators/loginSchema";
 import { LoginInput } from "@/types/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Logo from "@/public/images/logo.jpg";
 import InputField from "@/components/form/InputField";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 
+function useAutoLogin() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token =
+      typeof window !== "undefined" &&
+      (localStorage.getItem("accessToken") ||
+        sessionStorage.getItem("accessToken"));
+
+    if (token) {
+      router.push("/home");
+    }
+  }, []);
+}
+
 export default function LoginPage() {
   const router = useRouter();
+
+  useAutoLogin(); // 🔐 auto login hook called here
 
   const {
     register,
@@ -24,40 +41,44 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
- const onSubmit = async (data: LoginInput) => {
-  setLoading(true);
-  setServerError("");
+  const onSubmit = async (data: LoginInput) => {
+    setLoading(true);
+    setServerError("");
 
-  try {
-    const res = await api.post("/auth/login", data);
+    try {
+      const res = await api.post("/auth/login", data);
+      console.log("Login response:", res.data);
 
-    const token = res.data.accessToken;
-    if (!token) throw new Error("Token not returned");
+      const { accessToken, refreshToken } = res.data;
+      if (!accessToken || !refreshToken) {
+        throw new Error("Token not returned");
+      }
 
-    if (rememberMe) {
-      localStorage.setItem("accessToken", token);
-    } else {
-      sessionStorage.setItem("accessToken", token);
+      if (rememberMe) {
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+      } else {
+        sessionStorage.setItem("accessToken", accessToken);
+        sessionStorage.setItem("refreshToken", refreshToken);
+      }
+
+      router.push("/home");
+    } catch (err: any) {
+      setServerError(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    router.push("/home");
-  } catch (err: any) {
-    setServerError(err.response?.data?.message || "Login failed");
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <main
       className="min-h-screen flex flex-col justify-center items-center bg-cover bg-center relative"
       style={{ backgroundImage: "url('/background.jpg')" }}
     >
-      {/* Glass Box */}
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="relative w-full max-w-sm bg-white/20 backdrop-blur-lg border-2 border-white/50 rounded-xl px-8 pt-14 pb-6 shadow-xl text-white"
       >
-        {/* Avatar */}
         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-20 rounded-full overflow-hidden border-4 border-white/30 shadow-lg bg-white">
           <Image src={Logo} alt="Logo" layout="fill" objectFit="contain" />
         </div>
@@ -119,3 +140,11 @@ export default function LoginPage() {
     </main>
   );
 }
+
+
+// const logout = () => {
+//   localStorage.removeItem("accessToken");
+//   localStorage.removeItem("refreshToken");
+//   sessionStorage.clear();
+//   router.push("/login");
+// };

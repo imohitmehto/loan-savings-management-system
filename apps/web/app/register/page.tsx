@@ -44,7 +44,9 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       setServerError(
-        error.response?.data?.message || error.message || "Something went wrong"
+        error.response?.data?.message ||
+          error.message ||
+          "Something went wrong",
       );
     } finally {
       setLoading(false);

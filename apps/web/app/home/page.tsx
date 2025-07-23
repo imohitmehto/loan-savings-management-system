@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import ShreeNathJiImg from '@/public/images/shrinathji.jpg'
+import Image from "next/image";
+import ShreeNathJiImg from "@/public/images/shrinathji.jpg";
 
 export default function HomePage() {
   return (
@@ -27,5 +27,5 @@ export default function HomePage() {
         </h2>
       </div>
     </main>
-  )
+  );
 }

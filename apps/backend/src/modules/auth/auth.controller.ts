@@ -22,13 +22,13 @@ export class AuthController {
   }
 
   @Post("verify-otp")
-  verifyOtp(@Body() body: { email: string; otp: string }) {
-    return this.authService.verify(body.email, body.otp);
+  verifyOtp(@Body() body: { userName: string; otp: string }) {
+    return this.authService.verify(body.userName, body.otp);
   }
 
   @Post("resend-otp")
-  resendOtp(@Body() body: { id: string }) {
-    return this.authService.resendOtp({ id: body.id });
+  resendOtp(@Body() body: { userName: string }) {
+    return this.authService.resendOtp({ userName: body.userName });
   }
 
   @Post("login")
@@ -36,7 +36,7 @@ export class AuthController {
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
-
+  
   @UseGuards(JwtAuthGuard)
   @Get("me")
   me(@Request() req) {

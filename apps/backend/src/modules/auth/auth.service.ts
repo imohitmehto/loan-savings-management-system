@@ -12,6 +12,8 @@ import { Hash } from "src/common/utils/hash.util";
 import { OtpService } from "src/modules/otp/otp.service";
 import { LoggerService } from "../../infrastructure/logger/logger.service";
 import { ConfigService } from "@nestjs/config";
+import { FormatPhoneNumberUtil } from "src/common/utils/format_phone_number.util";
+import { UsernameUtil } from "src/common/utils/user_name.util";
 
 @Injectable()
 export class AuthService {
@@ -33,87 +35,152 @@ export class AuthService {
     this.refreshExpiresIn = jwt.refreshExpiresIn;
   }
 
-  async register(dto: RegisterDto): Promise<{ message: string }> {
-    const { name, email, phone, password } = dto;
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ message: string; userName: string }> {
+    const { firstName, lastName, dob, email, phone, password } = dto;
 
-    // Check for existing user
-    const existingUser = await this.userService.findByEmail(email);
+    // Check if user already exists by email or phone
+    const existingUser = await this.userService.findUserByIdentifier(
+      email,
+      phone,
+    );
     if (existingUser) {
-      throw new BadRequestException(`User with email ${email} already exists`);
+      throw new BadRequestException("User already exists");
     }
 
-    // Hash the password securely
+    // Generate a unique username & hash the password
+    const userName = UsernameUtil.generate(firstName, lastName, dob);
     const hashedPassword = await this.hashService.hashPassword(password);
 
-    // Format phone number with +91 if not already present
-    const formattedPhone = this.formatPhoneNumber(phone);
+    // Format the phone number if provided
+    const formattedPhone = phone
+      ? FormatPhoneNumberUtil.formatPhoneNumber(phone)
+      : "";
 
-    // Create user
+    // Create the user entry
     const createdUser = await this.userService.createUser({
-      name,
+      firstName,
+      lastName,
+      dob: new Date(dob),
       email,
       phone: formattedPhone,
+      userName,
       password: hashedPassword,
     });
 
-    // Send OTP (email & phone)
+    // Send OTP (email and/or phone)
     try {
       await this.otpService.sendOtp(createdUser.id, email, formattedPhone);
-      this.logger.log(`OTP sent to ${email} and ${formattedPhone}`);
+      this.logOtpSent(email, formattedPhone);
     } catch (err) {
-      this.logger.error(`Failed to send OTP to ${email}`, err);
+      this.logger.error(
+        `Failed to send OTP to ${email || formattedPhone}`,
+        err,
+      );
       throw new InternalServerErrorException(
         "Failed to send OTP. Please try again later.",
       );
     }
 
-    return { message: "OTP sent successfully" };
+    return { message: "OTP sent successfully", userName };
   }
 
-  async verify(email: string, otp: string): Promise<{ message: string }> {
-    const success = await this.otpService.verifyOtp(email, otp);
-    if (!success) {
+  private logOtpSent(email?: string, phone?: string): void {
+    if (email && phone) {
+      this.logger.log(`OTP sent to ${email} and ${phone}`);
+    } else if (email) {
+      this.logger.log(`OTP sent to ${email}`);
+    } else if (phone) {
+      this.logger.log(`OTP sent to ${phone}`);
+    }
+  }
+
+  /**
+   * Verifies user's account via OTP and marks them as verified.
+   * @param userName - Unique username to identify user.
+   * @param otp - OTP provided by user for verification.
+   * @returns Success message if OTP is valid.
+   */
+  async verify(userName: string, otp: string): Promise<{ message: string }> {
+    // Step 1: Lookup user by username
+    const user = await this.userService.findByUserName(userName);
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    const userId = user.id;
+
+    // Step 2: Validate OTP for that user
+    const isOtpValid = await this.otpService.verifyOtp(userId, otp);
+    if (!isOtpValid) {
       throw new BadRequestException("Invalid or expired OTP");
     }
 
-    const user = await this.userService.findByEmail(email);
-    const userId = user!.id;
-    if (!user) {
-      throw new BadRequestException("User not found");
-    }
+    // Step 3: Mark user as verified
     await this.userService.updateUser(userId, { isVerified: true });
 
+    // Step 4: Return success message
     return { message: "Account verified successfully" };
   }
 
-  async resendOtp(data: { id: string }): Promise<{ message: string }> {
-    const user = await this.userService.findById(data.id);
-    if (!user) throw new NotFoundException("User not found");
+  /**
+   * Resends OTP to the user via email or phone.
+   * @param data - Object containing the user's username.
+   * @returns Message confirming OTP delivery.
+   */
+  async resendOtp(data: { userName: string }): Promise<{ message: string }> {
+    // Step 1: Fetch user by username
+    const user = await this.userService.findByUserName(data.userName);
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
 
-    await this.otpService.sendOtp(user.id, user.email, user.phone);
+    const { id: userId, email, phone } = user;
+
+    // Step 2: Send OTP via preferred method
+    await this.otpService.sendOtp(userId, email, phone);
+
+    // Step 3: Confirm resend
     return { message: "OTP resent successfully" };
   }
 
+  /**
+ * Handles user login by validating credentials and issuing tokens.
+ * If user is not verified, it triggers OTP resend and blocks login.
+ */
   async login(dto: LoginDto): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: { id: string; name: string; email: string };
+    user: { id: string; userName: string };
   }> {
-    const user = await this.userService.findByEmail(dto.email);
+    // Step 1: Find user by username
+    const user = await this.userService.findByUserName(dto.userName);
 
-    if (
-      !user ||
-      !(await this.hashService.comparePasswords(dto.password, user.password))
-    ) {
+    // Step 2: Validate existence and password
+    const credentialsAreInvalid =
+      !user || !(await this.hashService.comparePasswords(dto.password, user.password));
+    if (credentialsAreInvalid) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
+    // Step 3: Check verification status
     if (!user.isVerified) {
-      throw new UnauthorizedException("Email not verified");
+      await this.resendOtp({ userName: dto.userName });
+
+      throw new UnauthorizedException(
+        "Account not verified. Please verify the OTP sent to your email/phone before logging in."
+      );
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    // Step 4: Build token payload
+    const payload = {
+      sub: user.id,
+      userName: user.userName,
+      role: user.role,
+    };
 
+    // Step 5: Generate access and refresh tokens
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.expiresIn,
     });
@@ -123,49 +190,39 @@ export class AuthService {
       secret: this.refreshSecret,
     });
 
+    // Optional: Update refresh token in DB
     // await this.userService.updateRefreshToken(user.id, refreshToken);
 
+    // Step 6: Return login response
     return {
       accessToken,
       refreshToken,
       user: {
         id: user.id,
-        name: user.name,
-        email: user.email,
+        userName: user.userName,
       },
     };
   }
 
-  private formatPhoneNumber(phone: string): string {
-    // Remove all non-digits
-    const digits = phone.replace(/\D/g, "");
-
-    // If already starts with +91, return as is
-    if (digits.startsWith("91") && digits.length === 12) {
-      return `+${digits}`;
-    }
-
-    // If 10 digits, assume Indian local number and add +91
-    if (digits.length === 10) {
-      return `+91${digits}`;
-    }
-
-    // If format is unexpected, throw error
-    throw new BadRequestException("Invalid phone number format");
-  }
-
-  async me(userId: string) {
+  /**
+   * Returns profile info of currently authenticated user.
+   * Includes only non-sensitive public fields.
+   */
+  async me(userId: string): Promise<{
+    id: string;
+    userName: string;
+    isVerified: boolean;
+    createdAt: Date;
+  }> {
     const user = await this.userService.findById(userId);
+
     if (!user) {
       throw new NotFoundException("User not found");
     }
 
-    // Return only safe user data
     return {
       id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
+      userName: user.userName,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
     };

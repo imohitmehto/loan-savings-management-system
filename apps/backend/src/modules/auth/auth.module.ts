@@ -9,12 +9,9 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 import { UserModule } from "../user/user.module";
-import { OtpService } from "../otp/otp.service";
-import { Hash } from "src/common/utils/hash.util";
-import { MailService } from "src/infrastructure/mail/mail.service";
-import { SmsService } from "src/infrastructure/sms/sms.service";
 import { LoggerModule } from "src/infrastructure/logger/logger.module";
-import { EmailTemplates } from "src/common/utils/template.util";
+import { CommonModule } from "src/common/common.module";
+import { OtpModule } from "../otp/otp.module";
 
 @Module({
   imports: [
@@ -32,18 +29,11 @@ import { EmailTemplates } from "src/common/utils/template.util";
     }),
     UserModule,
     LoggerModule,
+    CommonModule,
+    OtpModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    JwtAuthGuard,
-    OtpService,
-    Hash,
-    MailService,
-    SmsService,
-    EmailTemplates,
-  ],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
   exports: [AuthService],
 })
 export class AuthModule {}

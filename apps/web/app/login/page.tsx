@@ -141,7 +141,6 @@ export default function LoginPage() {
   );
 }
 
-
 // const logout = () => {
 //   localStorage.removeItem("accessToken");
 //   localStorage.removeItem("refreshToken");

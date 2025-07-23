@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/database/prisma.service";
 import { MailService } from "../../infrastructure/mail/mail.service";
 import { SmsService } from "../../infrastructure/sms/sms.service";
-import { OtpGenerator } from "../../common/utils/otp-generator.util";
+import { OtpGenerator } from "../../common/utils/otp_generator.util";
 import { Hash } from "../../common/utils/hash.util";
 
 @Injectable()
@@ -12,48 +12,71 @@ export class OtpService {
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
     private readonly hashService: Hash,
-  ) {}
+  ) { }
 
   /**
-   * Generates 6-digit OTP, saves to DB, and sends via email & SMS
-   * @param email recipient email
-   * @param phone recipient phone (optional)
-   */
-  async sendOtp(userId: string, email?: string, phone?: string) {
-    const otp = OtpGenerator.generate();
-    const hashedOtp = await this.hashService.hashOtp(otp);
-
-    // const otpAlpha = OtpGenerator.generate({ length: 8, numericOnly: false, includeUpperCase: true });
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
-    await this.prisma.otp.create({
-      data: {
-        userId,
-        email,
-        phone,
-        code: hashedOtp,
-        expiresAt,
-        lastSentAt: new Date(),
-      },
-    });
+  * Generates a 6-digit OTP, saves or updates it in DB, and sends via email/SMS.
+  * @param userId - ID of the user receiving OTP.
+  * @param email - Email address for OTP delivery (optional).
+  * @param phone - Phone number for SMS delivery (optional).
+  */
+  async sendOtp(userId: string, email?: string, phone?: string): Promise<{ message: string }> {
+    // Step 1: Verify user existence
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true },
+      select: { userName: true },
     });
 
-    const userName = user?.name;
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
 
+    const userName = user.userName;
+    const otp = OtpGenerator.generate(); // e.g. 6-digit numeric code
+    const hashedOtp = await this.hashService.hashOtp(otp);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+    const lastSentAt = new Date();
+
+    // Step 2: Check for existing OTP record
+    const existingOtp = await this.prisma.otp.findFirst({
+      where: { userId },
+    });
+
+    if (existingOtp) {
+      // Update existing OTP record
+      await this.prisma.otp.update({
+        where: { id: existingOtp.id },
+        data: {
+          code: hashedOtp,
+          expiresAt,
+          lastSentAt,
+        },
+      });
+    } else {
+      // Create new OTP record
+      await this.prisma.otp.create({
+        data: {
+          userId,
+          code: hashedOtp,
+          expiresAt,
+          lastSentAt,
+          email,
+          phone,
+        },
+      });
+    }
+
+    // Step 3: Send OTP via email or SMS
     if (email) {
-      await this.mailService.sendOtpMail(email, userName!, otp);
+      await this.mailService.sendOtpMail(email, userName, otp);
     }
 
     if (phone) {
-      if (phone) {
-        await this.smsService.sendOtp(phone, userName!, otp);
-      }
-
-      return { message: "OTP sent successfully" };
+      await this.smsService.sendOtp(phone, userName, otp);
     }
+
+    // Step 4: Return response
+    return { message: "OTP sent successfully" };
   }
 
   /**
@@ -62,9 +85,9 @@ export class OtpService {
    * @param code user-entered OTP
    * @returns success boolean
    */
-  async verifyOtp(email: string, code: string): Promise<boolean> {
+  async verifyOtp(userId: string, code: string): Promise<boolean> {
     const otp = await this.prisma.otp.findFirst({
-      where: { email },
+      where: { userId },
     });
 
     // Check if OTP exists and is not expired

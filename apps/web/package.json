@@ -6,13 +6,15 @@
     "dev": "next dev  -p 3000 --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.ts\" \"**/*.tsx\""
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@hookform/resolvers": "^5.0.1",
     "axios": "^1.9.0",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "next": "^15.3.4",
     "react": "^19.1.0",

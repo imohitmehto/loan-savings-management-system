@@ -15,8 +15,22 @@ enum Role {
 }
 
 enum AccountType {
-  SAVINGS
+  SAVING
   CURRENT
+  LOAN
+  FIXED_DEPOSIT
+}
+
+enum AddressType {
+  CURRENT
+  PERMANENT
+  NOMINEE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum TransactionType {
@@ -45,12 +59,28 @@ enum ReportType {
   ACCOUNT_HISTORY
 }
 
+enum OccupationType {
+  BUSINESS
+  JOB
+  SELF_EMPLOYED
+  STUDENT
+  UNEMPLOYED
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  CLOSED
+}
+
 model User {
   id         String   @id @default(uuid())
-  fullName   String?
-  name       String
-  email      String   @unique
-  phone      String  
+  firstName  String
+  lastName   String
+  dob        DateTime
+  email      String
+  phone      String
+  userName   String   @unique 
   password   String
   isVerified Boolean  @default(false)
   role       Role     @default(CUSTOMER)
@@ -80,17 +110,22 @@ model Otp {
 }
 
 model Address {
-  id         String   @id @default(uuid())
-  street     String?
-  city       String
-  district   String
-  state      String
-  pincode    String?
-  landmark   String?
-  createdAt  DateTime @default(now())
+  id             String    @id @default(uuid())
+  type           AddressType
+  addressLine1   String
+  addressLine2   String?
+  landmark       String?
+  city           String
+  state          String
+  country        String
+  pinCode        String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id])
+  userId String?
+  user   User?    @relation(fields: [userId], references: [id])
+
+  nominees Nominee[]
 
   accountId  String?
   account    Account?  @relation(fields: [accountId], references: [id])
@@ -99,12 +134,26 @@ model Address {
 model Account {
   id             String              @id @default(uuid())
   accountNumber  String              @unique
-  name           String
+  firstName      String
+  lastName       String
+  father_spounce String
+  occupation     String
+  company_institute String
+  email          String
+  phone          String
+  gender         Gender
+  dob            DateTime
+  photo          String
   type           AccountType
+  isChildAccount Boolean  @default(false)
+  parentAccountId String
+  accountOpeningFee Float
   balance        Float               @default(0)
   status         String
   openedAt       DateTime            @default(now())
   closedAt       DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @default(now())
 
   userId         String
   user           User                @relation(fields: [userId], references: [id])
@@ -115,6 +164,7 @@ model Account {
   transactions   Transaction[]
   profitShares   ProfitDistribution[]
   addresses      Address[]
+  nominees Nominee[]
 }
 
 model AccountGroup {
@@ -124,6 +174,21 @@ model AccountGroup {
   profits  ProfitDistribution[]
 }
 
+model Nominee {
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  relation     String
+  email        String?
+  phoneNumber  String?
+
+  address Address? @relation(fields: [addressId], references: [id])
+  addressId String?
+
+  account      Account? @relation(fields: [accountId], references: [id])
+  accountId    String? 
+}
+
 model Transaction {
   id          String         @id @default(uuid())
   amount      Float
@@ -131,8 +196,8 @@ model Transaction {
   description String?
   createdAt   DateTime       @default(now())
 
-  accountId   String
   account     Account        @relation(fields: [accountId], references: [id])
+  accountId   String
 }
 
 model Loan {

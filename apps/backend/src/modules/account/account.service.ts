@@ -1,6 +1,10 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/database/prisma.service";
-import { CreateAccountDto } from "./dtos/create-account.dto";
+import { CreateAccountDto, UpdateAccountDto } from "./dtos";
 import { AccountNumberUtil } from "../../common/utils/account_number.util";
 import { Hash } from "src/common/utils/hash.util";
 import { Account } from "@prisma/client";
@@ -17,6 +21,58 @@ export class AccountService {
     private readonly accountNumberUtil: AccountNumberUtil,
     private readonly hashService: Hash,
   ) {}
+
+  /**
+   * Get all accounts
+   */
+  async getAllAccounts(): Promise<Account[]> {
+    return this.prisma.account.findMany();
+  }
+
+  /**
+   * Get account by ID
+   * @param id - Account ID
+   */
+  async getAccountById(id: string): Promise<Account> {
+    const account = await this.prisma.account.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        group: true,
+        transactions: true,
+        profitShares: true,
+        addresses: true,
+        nominees: true,
+      },
+    });
+
+    if (!account) {
+      throw new NotFoundException("Account not found");
+    }
+
+    return account;
+  }
+
+  // /**
+  //  * Update account by ID
+  //  * @param id - Account ID
+  //  * @param data - Fields to update
+  //  */
+  // async updateAccount(
+  //   id: string,
+  //   dto: UpdateAccountDto,
+  // ): Promise<Account> {
+  //   // Optional: validate existence
+  //   const exists = await this.prisma.account.findUnique({ where: { id } });
+  //   if (!exists) {
+  //     throw new NotFoundException("Account not found");
+  //   }
+
+  //   return this.prisma.account.update({
+  //     where: { id },
+  //     dto,
+  //   });
+  // }
 
   async createAccount(dto: CreateAccountDto): Promise<{
     message: string;

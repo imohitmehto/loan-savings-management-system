@@ -17,29 +17,32 @@ import { AccountService } from "./account.service";
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
+  @Get("get")
+  getAll() {
+    return this.accountService.getAllAccounts();
+  }
+
+  @Get("get/:id")
+  getOne(@Param("id") id: string) {
+    return this.accountService.getAccountById(id);
+  }
+
   @Post("create")
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateAccountDto) {
     return this.accountService.createAccount(dto);
   }
 
-  // @Get()
-  // findAll() {
-  //     return this.accountService.findAll();
+  // @Patch("update/:id")
+  // update(
+  //   @Param("id") id: string,
+  //   @Body() dto: UpdateAccountDto,
+  // ) {
+  //   return this.accountService.updateAccount(id, dto);
   // }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //     return this.accountService.findOne(id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() dto: UpdateAccountDto) {
-  //     return this.accountService.update(id, dto);
-  // }
-
-  // @Delete(':id')
+  // @Delete('delete/:id')
   // remove(@Param('id') id: string) {
-  //     return this.accountService.remove(id);
+  //   return this.accountService.remove(id);
   // }
 }

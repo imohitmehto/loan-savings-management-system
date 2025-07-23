@@ -59,7 +59,13 @@ export class UserService {
   async createUser(
     data: Pick<
       User,
-      "firstName" | "lastName" | "dob" | "email" | "phone" | "userName" | "password"
+      | "firstName"
+      | "lastName"
+      | "dob"
+      | "email"
+      | "phone"
+      | "userName"
+      | "password"
     >,
   ): Promise<User> {
     return this.prisma.user.create({ data });

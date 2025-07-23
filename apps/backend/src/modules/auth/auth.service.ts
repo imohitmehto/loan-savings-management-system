@@ -9,7 +9,7 @@ import { JwtService } from "@nestjs/jwt";
 import { UserService } from "../user/user.service";
 import { RegisterDto, LoginDto } from "./dtos";
 import { Hash } from "src/common/utils/hash.util";
-import { OtpService } from "src/modules/otp/otp.service";
+import { OtpService } from "src/infrastructure/otp/otp.service";
 import { LoggerService } from "../../infrastructure/logger/logger.service";
 import { ConfigService } from "@nestjs/config";
 import { FormatPhoneNumberUtil } from "src/common/utils/format_phone_number.util";
@@ -146,9 +146,9 @@ export class AuthService {
   }
 
   /**
- * Handles user login by validating credentials and issuing tokens.
- * If user is not verified, it triggers OTP resend and blocks login.
- */
+   * Handles user login by validating credentials and issuing tokens.
+   * If user is not verified, it triggers OTP resend and blocks login.
+   */
   async login(dto: LoginDto): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -159,7 +159,8 @@ export class AuthService {
 
     // Step 2: Validate existence and password
     const credentialsAreInvalid =
-      !user || !(await this.hashService.comparePasswords(dto.password, user.password));
+      !user ||
+      !(await this.hashService.comparePasswords(dto.password, user.password));
     if (credentialsAreInvalid) {
       throw new UnauthorizedException("Invalid credentials");
     }
@@ -169,7 +170,7 @@ export class AuthService {
       await this.resendOtp({ userName: dto.userName });
 
       throw new UnauthorizedException(
-        "Account not verified. Please verify the OTP sent to your email/phone before logging in."
+        "Account not verified. Please verify the OTP sent to your email/phone before logging in.",
       );
     }
 

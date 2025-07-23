@@ -6,12 +6,12 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 import { UserModule } from "../user/user.module";
 import { LoggerModule } from "src/infrastructure/logger/logger.module";
 import { CommonModule } from "src/common/common.module";
-import { OtpModule } from "../otp/otp.module";
+import { OtpModule } from "../../infrastructure/otp/otp.module";
+import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
 
 @Module({
   imports: [

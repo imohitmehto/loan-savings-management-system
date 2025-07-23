@@ -6,8 +6,10 @@ import { UserModule } from "./modules/user/user.module";
 import appConfig from "./config/app.config";
 import { validationSchema } from "./common/validations/joi/validationSchema";
 import { LoggerModule } from "./infrastructure/logger/logger.module";
-import { OtpModule } from "./modules/otp/otp.module";
+import { OtpModule } from "./infrastructure/otp/otp.module";
 import { AccountModule } from "./modules/account/account.module";
+import { TransactionModule } from "./modules/transaction/transaction.module";
+import { PolicyModule } from "./modules/policy/policy.module";
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { AccountModule } from "./modules/account/account.module";
     LoggerModule,
     OtpModule,
     AccountModule,
+    TransactionModule,
+    PolicyModule,
   ],
 })
 export class AppModule {}

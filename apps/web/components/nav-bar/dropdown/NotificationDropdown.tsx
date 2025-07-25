@@ -20,7 +20,6 @@ export default function NotificationDropdown() {
         const data = await response.json();
         setNotifications(data);
       } catch (error) {
-        console.error("Failed to fetch notifications, loading dummy data.", error);
         // Fallback dummy data
         setNotifications([
           { id: 1, message: "Dummy: Welcome to the dashboard!", read: false },

@@ -3,13 +3,13 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registrationSchema } from "@/lib/validators/registerSchema";
+import { registrationSchema } from "@/utils/validators/registerSchema";
 import { RegisterInput } from "@/types/auth";
-import InputField from "@/components/form/InputField";
+import InputField from "@/components/auth/InputField";
 import Image from "next/image";
 import Logo from "@/public/images/logo.jpg";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
+import api from "@/lib/api/axiosInstance";
 
 export default function RegisterPage() {
   const router = useRouter();

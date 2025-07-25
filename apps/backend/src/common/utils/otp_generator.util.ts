@@ -41,7 +41,6 @@ export class OtpGenerator {
 
       return otpChars.join("");
     } catch (error) {
-      console.error("OTP generation failed:", error);
       throw new InternalServerErrorException("Failed to generate OTP");
     }
   }

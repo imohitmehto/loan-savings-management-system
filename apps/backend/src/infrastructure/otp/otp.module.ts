@@ -8,13 +8,7 @@ import { EmailTemplates } from "src/common/utils/template.util";
 
 @Module({
   imports: [LoggerModule],
-  providers: [
-    SmsService,
-    MailService,
-    Hash,
-    OtpService,
-    EmailTemplates,
-  ],
+  providers: [SmsService, MailService, Hash, OtpService, EmailTemplates],
   exports: [OtpService],
 })
-export class OtpModule { }
+export class OtpModule {}

@@ -154,23 +154,23 @@ export class AuthService {
     refreshToken: string;
     user: { id: string; userName: string };
   }> {
-    // Step 1: Find user by username
-    const user = await this.userService.findByUserName(dto.userName);
+    const { userName, password, rememberMe = false } = dto;
 
-    // Step 2: Validate existence and password
+    // Step 1: Find user
+    const user = await this.userService.findByUserName(userName);
+
+    // Step 2: Validate credentials
     const credentialsAreInvalid =
-      !user ||
-      !(await this.hashService.comparePasswords(dto.password, user.password));
+      !user || !(await this.hashService.comparePasswords(password, user.password));
     if (credentialsAreInvalid) {
-      throw new UnauthorizedException("Invalid credentials");
+      throw new UnauthorizedException("Invalid login credentials provided.");
     }
 
-    // Step 3: Check verification status
+    // Step 3: Check verification
     if (!user.isVerified) {
-      await this.resendOtp({ userName: dto.userName });
-
+      await this.resendOtp({ userName });
       throw new UnauthorizedException(
-        "Account not verified. Please verify the OTP sent to your email/phone before logging in.",
+        "Account not verified. Please verify the OTP sent to your email/phone before logging in."
       );
     }
 
@@ -181,20 +181,20 @@ export class AuthService {
       role: user.role,
     };
 
-    // Step 5: Generate access and refresh tokens
+    // Step 5: Compute dynamic expiry
+    const accessTokenExpiry = rememberMe ? "30d" : this.expiresIn;
+    const refreshTokenExpiry = rememberMe ? "60d" : this.refreshExpiresIn;
+
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: this.expiresIn,
+      expiresIn: accessTokenExpiry,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: this.refreshExpiresIn,
+      expiresIn: refreshTokenExpiry,
       secret: this.refreshSecret,
     });
 
-    // Optional: Update refresh token in DB
-    // await this.userService.updateRefreshToken(user.id, refreshToken);
-
-    // Step 6: Return login response
+    // Step 6: Return enriched response
     return {
       accessToken,
       refreshToken,

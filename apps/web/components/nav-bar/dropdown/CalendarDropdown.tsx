@@ -12,7 +12,7 @@ import {
   isSameMonth,
 } from "date-fns";
 import { useState } from "react";
-import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { useCalendarEvents } from "@/lib/hooks/useCalendarEvents";
 
 export default function CalendarDropdown() {
   const [currentMonth, setCurrentMonth] = useState(new Date());

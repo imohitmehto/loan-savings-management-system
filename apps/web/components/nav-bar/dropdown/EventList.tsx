@@ -1,4 +1,4 @@
-import { CalendarEvent } from "@/hooks/useCalendarEvents";
+import { CalendarEvent } from "@/lib/hooks/useCalendarEvents";
 
 interface EventListProps {
   date: string;

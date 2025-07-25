@@ -2,12 +2,12 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
-} from '@nestjs/common';
-import { PrismaService } from 'src/infrastructure/database/prisma.service';
-import { MailService } from 'src/infrastructure/mail/mail.service';
-import { SmsService } from 'src/infrastructure/sms/sms.service';
-import { OtpGenerator } from 'src/common/utils/otp_generator.util';
-import { Hash } from 'src/common/utils/hash.util';
+} from "@nestjs/common";
+import { PrismaService } from "src/infrastructure/database/prisma.service";
+import { MailService } from "src/infrastructure/mail/mail.service";
+import { SmsService } from "src/infrastructure/sms/sms.service";
+import { OtpGenerator } from "src/common/utils/otp_generator.util";
+import { Hash } from "src/common/utils/hash.util";
 
 @Injectable()
 export class OtpService {
@@ -16,7 +16,7 @@ export class OtpService {
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
     private readonly hashService: Hash,
-  ) { }
+  ) {}
 
   /**
    * Public method to generate and send OTP via email/SMS.
@@ -31,7 +31,8 @@ export class OtpService {
     const firstName = user.firstName;
     const lastName = user.lastName;
 
-    const userName = firstName && lastName ? `${firstName} ${lastName}` : user.userName;
+    const userName =
+      firstName && lastName ? `${firstName} ${lastName}` : user.userName;
 
     const plainOtp = OtpGenerator.generate();
     const hashedOtp = await this.hashService.hashOtp(plainOtp);
@@ -41,7 +42,7 @@ export class OtpService {
 
     await this.dispatchOtp(email, phone, userName, plainOtp);
 
-    return { message: 'OTP sent successfully' };
+    return { message: "OTP sent successfully" };
   }
 
   /**
@@ -66,14 +67,16 @@ export class OtpService {
   /**
    * Ensures user exists in DB, throws if not found.
    */
-  private async fetchUserOrThrow(userId: string): Promise<{ userName?: string; firstName?: string; lastName?: string }> {
+  private async fetchUserOrThrow(
+    userId: string,
+  ): Promise<{ userName?: string; firstName?: string; lastName?: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { userName: true, firstName: true, lastName: true },
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     return user;
@@ -111,8 +114,8 @@ export class OtpService {
         });
       }
     } catch (err) {
-      console.error('OtpSaveError:', err);
-      throw new InternalServerErrorException('Failed to generate OTP');
+      console.error("OtpSaveError:", err);
+      throw new InternalServerErrorException("Failed to generate OTP");
     }
   }
 
@@ -133,10 +136,9 @@ export class OtpService {
       if (phone && userName && plainOtp) {
         await this.smsService.sendOtp(phone, userName, plainOtp);
       }
-
     } catch (err) {
-      console.error('OtpDispatchError:', err);
-      throw new InternalServerErrorException('Failed to send OTP');
+      console.error("OtpDispatchError:", err);
+      throw new InternalServerErrorException("Failed to send OTP");
     }
   }
 }

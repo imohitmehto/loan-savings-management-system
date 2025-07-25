@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Logo from "@/public/images/logo.jpg";
-import api from "@/lib/api";
+import api from "@/lib/api/axiosInstance";
 
 export default function VerifyOtpPage() {
   const router = useRouter();

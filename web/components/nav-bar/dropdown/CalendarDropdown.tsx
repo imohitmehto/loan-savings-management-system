@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   format,
   startOfMonth,
@@ -10,12 +10,12 @@ import {
   isSameMonth,
   isToday,
 } from "date-fns";
-import { useState } from "react";
-import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { useCalendarEvents, CalendarEvent } from "@/hooks/useCalendarEvents";
 import { fetchCalendarEventsAdmin } from "@/lib/api/calendar";
 
 export default function CalendarDropdown() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
   const {
     events,
     selectedDate,
@@ -27,21 +27,23 @@ export default function CalendarDropdown() {
     fetchEvents: fetchCalendarEventsAdmin,
   });
 
-  // Calendar grid always renders
+  // Render calendar grid
   const renderCalendar = useCallback(() => {
     const monthStart = startOfMonth(currentMonth);
     const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
     let day = startDate;
     const rows = [];
+
     for (let week = 0; week < 6; week++) {
       const days = [];
       for (let d = 0; d < 7; d++) {
         const dateStr = format(day, "yyyy-MM-dd");
-        // Show markers only if data loaded, else render grid blank
+
         const hasEvents = !loading && !!events[dateStr];
         const isCurrent = isSameMonth(day, currentMonth);
-        const isSelected = selectedDate && isSameDay(day, selectedDate);
+        const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
         const isCurrentDay = isToday(day);
+
         days.push(
           <div
             key={day.toISOString()}
@@ -65,6 +67,7 @@ export default function CalendarDropdown() {
             )}
           </div>,
         );
+
         day = addDays(day, 1);
       }
       rows.push(
@@ -78,9 +81,11 @@ export default function CalendarDropdown() {
 
   return (
     <div className="absolute right-0 top-full mt-2 bg-white text-black shadow-xl w-96 rounded-xl z-50 p-4">
-      {/* Header and days-of-week unchanged */}
+      {/* Calendar header and days-of-week can be added here */}
+
       {renderCalendar()}
-      {/* Event details or status only below */}
+
+      {/* Event details below */}
       {selectedDate && (
         <div className="mt-4 border-t pt-3">
           <h4 className="text-sm font-semibold mb-1">
@@ -93,9 +98,11 @@ export default function CalendarDropdown() {
           ) : (
             <ul className="text-sm list-disc list-inside space-y-1">
               {getEventsForDate(selectedDate).length > 0 ? (
-                getEventsForDate(selectedDate).map((event, i) => (
-                  <li key={i}>{event}</li>
-                ))
+                getEventsForDate(selectedDate).map(
+                  (event: CalendarEvent, i) => (
+                    <li key={event.id || i}>{event.title}</li> // Render event.title or other property
+                  ),
+                )
               ) : (
                 <li className="text-gray-400">No events</li>
               )}

@@ -23,6 +23,12 @@ import PersonalInfoSection from "./Sections/PersonalInfoSection";
 import { NomineeSection } from "./Sections/NomineeSection";
 import { NomineeRelationOptions } from "@/utils/enums/nominee-relation.enum";
 
+// --- Recommended: Define a Group type for clarity ---
+type Group = { id: string; name?: string };
+
+// --- Recommended: Options for selects
+type SelectOption = { value: string; label: string };
+
 export default function AccountForm({
   initialValues = {},
   onSubmit,
@@ -44,9 +50,9 @@ export default function AccountForm({
   }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [groupOptions, setGroupOptions] = useState<string[]>([]);
+  const [groupOptions, setGroupOptions] = useState<SelectOption[]>([]);
   const [parentAccountOptions, setParentAccountOptions] = useState<
-    { value: string; label: string }[]
+    SelectOption[]
   >([]);
 
   /** ---------------- Derived Values ---------------- */
@@ -54,20 +60,20 @@ export default function AccountForm({
   const isChildAccount = age !== null && age < 18;
 
   /** ---------------- Effects ---------------- */
-  // Load groups (for quick caching - still lazy in UI)
   useEffect(() => {
     fetchAllAccountGroup()
-      .then((groupsData) => {
-        const groupsArray = Array.isArray(groupsData)
-          ? groupsData
-          : groupsData?.items || [];
-
-        // ✅ Store as { value, label }
+      .then((groupsData: Group[] | { items: Group[] }) => {
+        // Accepts both: array or paged object with items
+        let groupsArray: Group[] = [];
+        if (Array.isArray(groupsData)) {
+          groupsArray = groupsData;
+        } else if ("items" in groupsData && Array.isArray(groupsData.items)) {
+          groupsArray = groupsData.items;
+        }
         const options = groupsArray.map((g) => ({
           value: g.id,
           label: g.name || "Unnamed Group",
         }));
-
         setGroupOptions(options);
       })
       .catch((error) => {
@@ -76,14 +82,13 @@ export default function AccountForm({
       });
   }, []);
 
-  // Load parent accounts (adult only) for caching
   useEffect(() => {
     fetchAllAccounts()
       .then((accountsData) => {
         setParentAccountOptions(
           Array.isArray(accountsData)
             ? accountsData
-                .filter((acc) => calculateAge(acc.dob) ?? 0 >= 18)
+                .filter((acc) => calculateAge(acc?.dob) ?? 0 >= 18)
                 .map((acc) => ({
                   value: acc.id,
                   label: `${acc.firstName} ${acc.lastName} (${acc.accountNumber})`,
@@ -97,7 +102,6 @@ export default function AccountForm({
       });
   }, []);
 
-  // Sync image preview on prop change
   useEffect(() => {
     if (initialValues.imagePreviewUrl) {
       setForm((f) => ({
@@ -107,7 +111,6 @@ export default function AccountForm({
     }
   }, [initialValues.imagePreviewUrl]);
 
-  // Sync child/parent account logic
   useEffect(() => {
     if (form.isChildAccount !== isChildAccount) {
       setForm((prev) => ({
@@ -122,12 +125,9 @@ export default function AccountForm({
   const onSearchGroups = useCallback(
     async (search: string, page: number) => {
       const pageSize = 10;
-
-      // ✅ Filter by label (safe)
       const filtered = groupOptions.filter((g) =>
         g.label.toLowerCase().includes(search.toLowerCase()),
       );
-
       const start = (page - 1) * pageSize;
       return {
         options: filtered.slice(start, start + pageSize),
@@ -140,14 +140,15 @@ export default function AccountForm({
   const onSearchParentAccounts = useCallback(
     async (search: string, page: number) => {
       const all = await fetchAllAccounts();
-      const filtered = all
-        .filter((acc) => (calculateAge(acc.dob) ?? 0) >= 18)
-        .filter((acc) =>
-          `${acc.firstName} ${acc.lastName} ${acc.accountNumber}`
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-        );
-
+      const filtered = Array.isArray(all)
+        ? all
+            .filter((acc) => (calculateAge(acc.dob) ?? 0) >= 18)
+            .filter((acc) =>
+              `${acc.firstName} ${acc.lastName} ${acc.accountNumber}`
+                .toLowerCase()
+                .includes(search.toLowerCase()),
+            )
+        : [];
       const pageSize = 10;
       const start = (page - 1) * pageSize;
       return {
@@ -342,17 +343,14 @@ export default function AccountForm({
 
       // Numbers
       if (typeof transformedForm.accountOpeningFee === "number") {
-        formData.append(
-          "accountOpeningFee",
-          transformedForm.accountOpeningFee.toString(),
-        );
+        formData.append("accountOpeningFee", transformedForm.accountOpeningFee);
       }
 
       // Addresses
       transformedForm.addresses.forEach((addr, idx) => {
         Object.entries(addr).forEach(([key, value]) => {
           if (value !== undefined && value !== null)
-            formData.append(`addresses[${idx}].${key}`, value);
+            formData.append(`addresses[${idx}].${key}`, String(value));
         });
       });
 
@@ -374,7 +372,7 @@ export default function AccountForm({
                   );
               });
             } else if (value !== undefined && value !== null) {
-              formData.append(`nominees[${idx}].${key}`, value);
+              formData.append(`nominees[${idx}].${key}`, String(value));
             }
           });
         });

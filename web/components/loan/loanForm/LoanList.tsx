@@ -16,7 +16,7 @@ export default function LoanList({
       filterFunction={(data, filterText) =>
         [
           data.loanNumber, // example field
-          `${data.borrowerFirstName} ${data.borrowerLastName}`, // borrower name
+          `${data.user.firstName} ${data.user.lastName}`, // borrower name
           data.status,
           data.loanType,
         ]

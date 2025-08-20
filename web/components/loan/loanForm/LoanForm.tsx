@@ -80,7 +80,7 @@ export default function LoanForm({
         setLoanTypeOptions(
           types.map((type) => ({
             value: type.id,
-            label: type.name,
+            label: type.user.firstName || "Unnamed Loan Type", // Add a label, fallback if necessary
           })),
         );
       })
@@ -316,7 +316,7 @@ export default function LoanForm({
         label="End Date"
         id="endDate"
         type="date"
-        value={form.endDate ? form.endDate.split("T") : ""}
+        value={form.endDate ? form.endDate.split("T")[0] : ""}
         onChange={handleChange}
         required
         error={errors.endDate}

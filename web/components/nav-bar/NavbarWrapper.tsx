@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useMemo } from "react";
+import { JSX, ReactNode, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import TopBar from "@/components/nav-bar/TopBar";
 

@@ -26,7 +26,6 @@ export const createTransaction = (formData: FormData) =>
   safeApiCall(async () => {
     apiLog("Creating new transaction...");
     const { data } = await api.post("/transaction/create", formData);
-    console.log("Transaction created:", data);
     return data;
   });
 

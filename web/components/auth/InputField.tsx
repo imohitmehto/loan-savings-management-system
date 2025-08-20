@@ -4,7 +4,7 @@ import React, { forwardRef, useState } from "react";
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string; // Descriptive label for accessibility
-  icon?: "user" | "lock"; // Optional FontAwesome icon
+  icon?: "user" | "lock" | "envelope" | "phone"; // Optional FontAwesome icon
   error?: string; // Optional field-level error message
 }
 

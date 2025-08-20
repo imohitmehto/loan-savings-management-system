@@ -14,12 +14,7 @@ export default function AccountList({
     <GenericList<Transaction>
       fetchData={fetchAllTransactions}
       filterFunction={(data, filterText) =>
-        [
-          data.accountNumber,
-          `${data.firstName} ${data.lastName}`,
-          data.status,
-          data.groupName,
-        ]
+        [data.accountId, data.status]
           .join(" ")
           .toLowerCase()
           .includes(filterText.toLowerCase())

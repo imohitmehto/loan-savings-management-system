@@ -22,10 +22,7 @@ export const emptyNominee: Nominee = {
   sameAsUserAddress: false,
 };
 
-export const emptyForm: AccountFormValues & {
-  isChildAccount?: boolean;
-  parentAccountId?: string;
-} = {
+export const emptyForm: AccountFormValues = {
   firstName: "",
   lastName: "",
   fatherSpouse: "",
@@ -44,8 +41,26 @@ export const emptyForm: AccountFormValues & {
   aadhaarCardFile: null,
   aadhaarCardPreview: "",
   addresses: {
-    current: { ...emptyAddress, type: "CURRENT" },
-    permanent: { ...emptyAddress, type: "PERMANENT" },
+    current: {
+      type: "CURRENT",
+      addressLine1: "",
+      addressLine2: "",
+      landmark: "",
+      city: "",
+      state: "",
+      country: "",
+      pinCode: "",
+    },
+    permanent: {
+      type: "PERMANENT",
+      addressLine1: "",
+      addressLine2: "",
+      landmark: "",
+      city: "",
+      state: "",
+      country: "",
+      pinCode: "",
+    },
     sameAsUserAddress: false,
   },
   nominees: [],

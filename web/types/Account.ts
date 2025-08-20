@@ -9,5 +9,8 @@ export interface Account {
   type: "SAVINGS" | "CURRENT" | "LOAN";
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   createdAt: string;
+  dob?: string;
+  groupName?: string;
+  imageUrl?: string;
   // add more fields as needed
 }

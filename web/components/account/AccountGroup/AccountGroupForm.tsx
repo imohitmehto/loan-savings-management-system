@@ -93,14 +93,14 @@ export default function AccountGroupForm({
         hasMore: start + pageSize < filtered.length,
       };
     },
-    [selectedAccounts]
+    [selectedAccounts],
   );
 
   /** Handlers */
   const onChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    >,
   ) => {
     const { id, value } = e.target;
     setForm((prev) => ({ ...prev, [id]: value }));
@@ -176,12 +176,12 @@ export default function AccountGroupForm({
             setSelectedAccounts((prev) =>
               prev.some((o) => o.value === option.value)
                 ? prev
-                : [...prev, option]
+                : [...prev, option],
             )
           }
           onRemove={(option) =>
             setSelectedAccounts((prev) =>
-              prev.filter((o) => o.value !== option.value)
+              prev.filter((o) => o.value !== option.value),
             )
           }
           onSearch={lazyLoadAccounts}

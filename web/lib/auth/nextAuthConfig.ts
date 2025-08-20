@@ -1,8 +1,8 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
-import api from "@/lib/api/axiosInstance";
-import { jwtDecode } from "jwt-decode";
-import axios from "axios";
+import { authorizeUser } from "./authHelpers";
+
+// Extend NextAuth types in types/next-auth.d.ts as described previously
 
 export const nextAuthConfig: NextAuthOptions = {
   providers: [
@@ -13,56 +13,7 @@ export const nextAuthConfig: NextAuthOptions = {
         password: { label: "Password", type: "password" },
         rememberMe: { label: "Remember Me", type: "checkbox" },
       },
-      authorize: async (credentials) => {
-        if (!credentials?.userName || !credentials?.password) {
-          throw new Error("Missing username or password");
-        }
-
-        try {
-          const { data } = await api.post("/auth/login", {
-            userName: credentials.userName,
-            password: credentials.password,
-            rememberMe: credentials.rememberMe || false,
-          });
-
-          if (!data?.accessToken || !data?.refreshToken) {
-            throw new Error("Invalid response from authentication server");
-          }
-
-          const decodedToken = jwtDecode<{
-            role?: string;
-            sub?: string;
-            name?: string;
-            userName?: string;
-          }>(data.accessToken);
-
-          if (decodedToken.role !== "ADMIN") {
-            throw new Error("Access denied: Unauthorized role");
-          }
-
-          return {
-            id: decodedToken.sub ?? "",
-            userName: decodedToken.userName ?? "Unknown",
-            name: decodedToken.name,
-            role: decodedToken.role,
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-            rememberMe: !!credentials.rememberMe,
-          };
-        } catch (error: unknown) {
-          // Server/log detail but send generic message to user
-          if (process.env.NODE_ENV === "development") {
-            console.error("Login error:", error);
-          }
-          if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || "Login failed");
-          }
-          if (error instanceof Error) {
-            throw new Error(error.message || "Login failed");
-          }
-          throw new Error("Login failed");
-        }
-      },
+      authorize: authorizeUser, // modular, testable, secure
     }),
   ],
 
@@ -72,6 +23,7 @@ export const nextAuthConfig: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
+      // Only assign SAFE fields
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
@@ -84,10 +36,11 @@ export const nextAuthConfig: NextAuthOptions = {
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as string;
-        session.user.name = token.name as string;
-        session.accessToken = token.accessToken as string;
-        session.refreshToken = token.refreshToken as string;
+        session.user.role = token.role;
+        session.user.name = token.name;
+        session.accessToken = token.accessToken;
+        session.refreshToken = token.refreshToken;
+        session.user.rememberMe = token.rememberMe ?? false;
       }
       return session;
     },

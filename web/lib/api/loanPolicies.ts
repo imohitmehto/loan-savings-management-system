@@ -23,7 +23,6 @@ export const createLoanPolicy = (formData: FormData) =>
   safeApiCall(async () => {
     apiLog("Creating new loan policy...");
     const { data } = await api.post("/loan-policy/create", formData);
-    console.log("Loan policy created:", data);
     return data;
   });
 

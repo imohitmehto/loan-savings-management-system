@@ -1,3 +1,5 @@
+//types/auth.ts
+
 "use client";
 export type RegisterInput = {
   name: string;
@@ -6,9 +8,7 @@ export type RegisterInput = {
   password: string;
 };
 
-export type LoginInput = {
+export type LoginFormData = {
   userName: string;
   password: string;
-  accessToken: string;
-  refreshToken: string;
 };

@@ -16,7 +16,6 @@ import { CreateTransactionDto } from "./dtos";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { FormDataRequest } from "nestjs-form-data";
 
 @Controller("transaction")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -26,7 +25,7 @@ export class TransactionController {
   @Post("create")
   @Roles("CUSTOMER", "ADMIN")
   @HttpCode(HttpStatus.OK)
-  @FormDataRequest()
+  // @FormDataRequest()
   async create(@Body() dto: CreateTransactionDto, @Req() req: any) {
     return this.transactionService.createTransaction(dto, req.user.id);
   }
@@ -48,7 +47,7 @@ export class TransactionController {
   @Delete(":id")
   @Roles("ADMIN")
   @HttpCode(HttpStatus.OK)
-  @FormDataRequest()
+  // @FormDataRequest()
   async delete(@Param("id") id: string, @Req() req: any) {
     return this.transactionService.deleteTransaction(id, req.user);
   }

@@ -25,7 +25,6 @@ import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
 export const createAccount = (formData: FormData) =>
   safeApiCall(async () => {
     const { data } = await api.post("/account/create", formData);
-    console.log("Account created:", data);
     return data;
   });
 
@@ -39,7 +38,6 @@ export const createAccount = (formData: FormData) =>
  */
 export const fetchAllAccounts = (): Promise<Account[]> =>
   safeApiCall(async () => {
-    console.log("Fetching all accounts...");
     apiLog("Fetching all accounts...");
     const { data } = await api.get<Account[]>("/account/get");
     if (!Array.isArray(data))

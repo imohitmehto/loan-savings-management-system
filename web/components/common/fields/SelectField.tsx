@@ -35,7 +35,6 @@ export default function SelectField({
         name={id}
         value={value ?? ""}
         onChange={(e) => {
-          console.log(`[SelectField] ${id} changed:`, e.target.value);
           onChange(e);
         }}
         required={required}

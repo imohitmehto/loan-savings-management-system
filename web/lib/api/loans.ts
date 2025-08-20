@@ -26,7 +26,6 @@ export const createLoan = (formData: FormData) =>
   safeApiCall(async () => {
     apiLog("Creating new loan...");
     const { data } = await api.post("/loan/create", formData);
-    console.log("Loan created:", data);
     return data;
   });
 

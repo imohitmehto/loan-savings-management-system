@@ -8,17 +8,23 @@ export interface Address {
   city: string;
   state: string;
   country: string;
-  pinCode: string; // required in backend
+  pinCode: string;
+}
+
+export interface AddressesGroup {
+  current: Address;
+  permanent: Address;
+  sameAsUserAddress?: boolean;
 }
 
 export interface Nominee {
   firstName: string;
   lastName: string;
   relation: string;
-  email?: string; // optional in backend
-  phoneNumber?: string; // optional in backend
+  email?: string;
+  phoneNumber?: string;
   address: Address;
-  sameAsUserAddress?: boolean; // optional in backend
+  sameAsUserAddress?: boolean;
 }
 
 export interface AccountFormValues {
@@ -32,12 +38,13 @@ export interface AccountFormValues {
   gender: "MALE" | "FEMALE" | "OTHER";
   dob: string;
   type: "SAVING" | "CURRENT" | "LOAN" | "FIXED_DEPOSIT" | string;
-  groupId?: string; // in backend DTO
-  groupName?: string; // UI-only
+  groupId?: string;
+  groupName?: string;
   isChildAccount?: boolean;
   parentAccountId?: string;
+  status?: string;
+  accountOpeningFee?: string;
 
-  // Files
   imageFile?: File | null;
   imagePreviewUrl?: string;
   panCardFile?: File | null;
@@ -45,10 +52,7 @@ export interface AccountFormValues {
   aadhaarCardFile?: File | null;
   aadhaarCardPreview?: string;
 
-  // Addresses as array (matches backend)
-  addresses: Address[];
-
-  // Nominees optional
+  addresses: AddressesGroup;
   nominees?: Nominee[];
 }
 
@@ -74,7 +78,12 @@ export interface FileUploadFieldProps {
 export interface PersonalInfoSectionProps {
   form: AccountFormValues;
   errors: Record<string, string>;
-  onChange: React.ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
-  groupOptions: string[];
+  onChange: React.ChangeEventHandler<
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  >;
+  groupOptions: { value: string; label: string }[];
   parentAccountOptions?: { value: string; label: string }[];
+  disabled?: boolean;
+  onSearchGroups?: (search: string, page: number) => Promise<any>;
+  onSearchParentAccounts?: (search: string, page: number) => Promise<any>;
 }

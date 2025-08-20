@@ -10,7 +10,7 @@ import { OtpModule } from "./infrastructure/otp/otp.module";
 import { AccountModule } from "./modules/account/account.module";
 import { TransactionModule } from "./modules/transaction/transaction.module";
 import { PolicyModule } from "./modules/policy/policy.module";
-import { MemoryStoredFile, NestjsFormDataModule } from "nestjs-form-data";
+import FileSystemStoredFile from "nestjs-form-data/dist/classes/storage/index";
 
 @Module({
   imports: [
@@ -19,6 +19,7 @@ import { MemoryStoredFile, NestjsFormDataModule } from "nestjs-form-data";
       load: [appConfig],
       validationSchema,
     }),
+
     PrismaModule,
     AuthModule,
     UserModule,
@@ -27,7 +28,6 @@ import { MemoryStoredFile, NestjsFormDataModule } from "nestjs-form-data";
     AccountModule,
     TransactionModule,
     PolicyModule,
-    NestjsFormDataModule.config({ storage: MemoryStoredFile }),
   ],
 })
 export class AppModule {}

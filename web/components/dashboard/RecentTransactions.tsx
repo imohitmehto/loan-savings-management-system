@@ -11,9 +11,7 @@ export default function RecentTransactions() {
     data: transactions,
     loading,
     error,
-  } = useFetchData({
-    apiCall: fetchAllTransactions,
-  });
+  } = useFetchData(fetchAllTransactions);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} />;

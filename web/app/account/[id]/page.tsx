@@ -19,7 +19,7 @@ export default function AccountDetailsPage() {
   const params = useParams();
   const accountId = params?.id as string;
 
-  const [account, setAccount] = useState<Account  | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);

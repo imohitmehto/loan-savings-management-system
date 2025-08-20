@@ -6,19 +6,20 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Logo from "@/public/images/logo.jpg";
 import { loginSchema } from "@/validators/loginSchema";
-import { LoginInput } from "@/types/auth";
 import InputField from "@/components/auth/InputField";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { z } from "zod";
 
 export default function LoginForm() {
   const router = useRouter();
+  type LoginFormData = z.infer<typeof loginSchema>;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginInput>({
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -26,7 +27,7 @@ export default function LoginForm() {
   const [serverError, setServerError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
-  const onSubmit = async (data: LoginInput) => {
+  const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setServerError("");
 

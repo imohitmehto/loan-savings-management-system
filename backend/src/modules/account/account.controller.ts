@@ -28,7 +28,6 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { accountMulterConfig } from "../../config/multer.config";
-import { FormDataRequest } from "nestjs-form-data";
 
 @Controller("account")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -59,7 +58,7 @@ export class AccountController {
   @Post("create")
   @Roles("ADMIN")
   @HttpCode(HttpStatus.CREATED)
-  @FormDataRequest()
+  // @FormDataRequest()
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -192,7 +191,7 @@ export class AccountController {
   @Post("group/create")
   @Roles("ADMIN")
   @HttpCode(HttpStatus.OK)
-  @FormDataRequest()
+  // @FormDataRequest()
   createAccountGroup(@Body() dto: CreateAccountGroupDto) {
     return this.accountService.createAccountGroup(dto);
   }

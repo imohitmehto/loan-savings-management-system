@@ -1,4 +1,8 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import axios, {
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosRequestHeaders,
+} from "axios";
 import { getSession } from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -17,30 +21,28 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     const session = await getSession();
+    const headers = (config.headers || {}) as AxiosRequestHeaders;
 
-    // Inject Bearer token if found
     if (session?.accessToken) {
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${session.accessToken}`,
-      };
+      headers.Authorization = `Bearer ${session.accessToken}`;
     }
 
     // 🔹 Auto-detect and set Content-Type if not explicitly set
-    if (config.data && !config.headers?.["Content-Type"]) {
+    if (config.data && !headers?.["Content-Type"]) {
       if (typeof FormData !== "undefined" && config.data instanceof FormData) {
         // Let Axios/browser set multipart boundary
-        config.headers["Content-Type"] = "multipart/form-data";
+        headers["Content-Type"] = "multipart/form-data";
       } else if (
         typeof URLSearchParams !== "undefined" &&
         config.data instanceof URLSearchParams
       ) {
-        config.headers["Content-Type"] = "application/x-www-form-urlencoded";
+        headers["Content-Type"] = "application/x-www-form-urlencoded";
       } else if (typeof config.data === "object") {
-        config.headers["Content-Type"] = "application/json";
+        headers["Content-Type"] = "application/json";
       }
     }
 
+    config.headers = headers;
     return config;
   },
   (error) => Promise.reject(error),

@@ -18,6 +18,7 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
-    "types": ["node", "express", "multer"],
-  }
+    "types": ["node", "express", "multer"]
+  },
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }

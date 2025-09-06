@@ -1,40 +1,95 @@
 import {
   IsString,
-  IsNotEmpty,
   IsOptional,
   IsNumber,
   IsBoolean,
-  IsInt,
+  IsEnum,
+  IsArray,
+  ArrayNotEmpty,
   Min,
-  IsObject,
+  IsDefined,
 } from "class-validator";
+import { Type } from "class-transformer";
+import { FeeType, InterestType, TermPeriod } from "@prisma/client";
 
 export class CreateLoanPolicyDto {
+  @IsDefined()
   @IsString()
-  @IsNotEmpty()
   name: string;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  description?: string | null;
 
-  @IsOptional()
+  @IsDefined()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
-  interestRate?: number;
+  minAmount: number;
 
-  @IsInt()
-  @Min(0)
-  minCreditScore: number;
-
+  @IsDefined()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
-  maxLoanAmount: number;
+  maxAmount: number;
 
-  @IsObject()
-  rules: Record<string, any>;
+  @IsDefined()
+  @IsEnum(InterestType)
+  interestType: InterestType;
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  interestRate: number;
+
+  @IsDefined()
+  @IsEnum(TermPeriod)
+  termPeriod: TermPeriod;
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxTerm: number;
+
+  @IsDefined()
+  @IsEnum(FeeType)
+  applicationFeeType: FeeType;
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  applicationFee: number;
+
+  @IsDefined()
+  @IsEnum(FeeType)
+  processingFeeType: FeeType;
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  processingFee: number;
+
+  @IsDefined()
+  @IsEnum(FeeType)
+  latePaymentPenaltiesType: FeeType;
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  latePaymentPenalties: number;
+
+  @IsDefined()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  rules: string[];
 
   @IsOptional()
   @IsBoolean()
-  isActive?: boolean;
+  isActive?: boolean = true;
 }

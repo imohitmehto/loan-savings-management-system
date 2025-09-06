@@ -1,81 +1,91 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Get,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-  Request,
-} from "@nestjs/common";
+import { Controller, Post, Body, HttpCode, HttpStatus } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
-import { RegisterDto, LoginDto } from "./dtos";
-import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
+import {
+  LoginDto,
+  RegisterDto,
+  RefreshTokenDto,
+  SendOtpDto,
+  VerifyOtpDto,
+} from "./dtos";
+import { Public } from "./decorators/public.decorator";
 
+@ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /**
-   * Registers a new user with validated credentials.
-   * @returns Success message with created user info
-   */
+  @Public()
   @Post("register")
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "User registration" })
+  @ApiResponse({ status: 201, description: "User registered successfully" })
+  @ApiResponse({ status: 409, description: "User already exists" })
   async register(@Body() dto: RegisterDto) {
-    return await this.authService.register(dto);
+    return this.authService.register(dto);
   }
 
-  /**
-   * Verifies OTP for user account activation.
-   * @returns Verification success message
-   */
-  @Post("verify-otp")
-  @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() body: { userName: string; otp: string }) {
-    const { userName, otp } = body;
-    if (!userName || !otp) {
-      throw new Error("Missing required fields: userName and otp");
-    }
-    return await this.authService.verify(userName, otp);
-  }
-
-  /**
-   * Resends OTP to the user if needed.
-   * @returns Resend confirmation
-   */
-  @Post("resend-otp")
-  @HttpCode(HttpStatus.OK)
-  async resendOtp(@Body() body: { userName: string }) {
-    const { userName } = body;
-    if (!userName) {
-      throw new Error("Missing required field: userName");
-    }
-    return await this.authService.resendOtp({ userName });
-  }
-
-  /**
-   * Authenticates user and returns access & refresh tokens.
-   * @returns Auth response with tokens and user info
-   */
+  @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "User login" })
+  @ApiResponse({
+    status: 200,
+    description: "Login successful",
+    schema: {
+      example: {
+        user: {
+          id: "clh1234567890",
+          email: "admin@example.com",
+          phone: "9876543210",
+          role: "ADMIN",
+          isActive: true,
+          isVerified: true,
+          lastLogin: new Date(),
+        },
+        tokens: {
+          accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: "Invalid credentials" })
   async login(@Body() dto: LoginDto) {
-    return await this.authService.login(dto);
+    return this.authService.login(dto);
   }
 
-  /**
-   * Returns current logged-in user's profile.
-   * Protected route with JWT.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Get("me")
+  @Public()
+  @Post("verify-otp")
   @HttpCode(HttpStatus.OK)
-  async me(@Request() req) {
-    const userId = req?.user?.userId;
-    if (!userId) {
-      throw new Error("Invalid user context");
-    }
-    return await this.authService.me(userId);
+  @ApiOperation({ summary: "Verify OTP for account activation" })
+  @ApiResponse({ status: 200, description: "OTP verified successfully" })
+  @ApiResponse({ status: 400, description: "Missing or invalid fields" })
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Public()
+  @Post("send-otp")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Send OTP to user" })
+  @ApiBody({ type: SendOtpDto })
+  @ApiResponse({ status: 200, description: "OTP sent successfully" })
+  @ApiResponse({
+    status: 400,
+    description: "Missing required field or too many requests",
+  })
+  async sendOtp(@Body() dto: SendOtpDto) {
+    return this.authService.requestOtp(dto);
+  }
+
+  @Public()
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Refresh access token" })
+  @ApiResponse({ status: 200, description: "Token refreshed successfully" })
+  @ApiResponse({ status: 401, description: "Invalid refresh token" })
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshTokens(dto);
   }
 }

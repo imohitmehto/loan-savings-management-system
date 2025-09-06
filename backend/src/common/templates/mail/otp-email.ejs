@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your OTP Code</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: auto; padding: 20px; }
+    .otp { font-size: 24px; font-weight: bold; color: #007bff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p>Hi <%= userName %>,</p>
+
+    <p>Your One-Time Password (OTP) is:</p>
+    <p class="otp"><%= otp %></p>
+
+    <p>This OTP is valid for 10 minutes. Please do not share it with anyone.</p>
+
+    <p>Thank you,<br>Team Sanskar Malvi Swarnkar</p>
+  </div>
+</body>
+</html>

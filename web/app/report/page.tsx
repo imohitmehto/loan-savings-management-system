@@ -17,7 +17,7 @@ export default function SimpleReportPage() {
   return (
     <div className="max-w-2xl mx-auto bg-white shadow-md rounded-lg p-8">
       <h1 className="text-2xl font-bold mb-4">Monthly Financial Summary</h1>
-      {/* <p className="mb-6 text-gray-700">
+      <p className="mb-6 text-gray-700">
         This report gives a quick overview of recent loan and savings account
         activity for August 2025.
       </p>
@@ -47,7 +47,7 @@ export default function SimpleReportPage() {
             <td className="border px-4 py-2">—</td>
           </tr>
         </tbody>
-      </table> */}
+      </table>
     </div>
   );
 }

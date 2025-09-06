@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/database/prisma.service";
-import { User, Prisma } from "@prisma/client";
+import { User, Role } from "@prisma/client";
 
 /**
  * Handles all operations related to user management.
@@ -10,26 +10,16 @@ export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Finds a user by email or phone number.
-   * Priority: checks email first, then falls back to phone.
-   * Returns the first matching user.
+   * Retrieves a user by their email.
    *
-   * @param email - Optional email address
-   * @param phone - Optional phone number
+   * @param email - The user's email
+   * @returns The matching user or null if not found
    */
-  async findUserByIdentifier(
-    email?: string,
-    phone?: string,
-  ): Promise<User | null> {
-    if (!email && !phone) return null;
+  async findByEmail(email: string): Promise<User | null> {
+    if (!email) return null;
 
-    const conditions: Prisma.UserWhereInput[] = [];
-
-    if (email) conditions.push({ email });
-    if (phone) conditions.push({ phone });
-
-    return this.prisma.user.findFirst({
-      where: { OR: conditions },
+    return this.prisma.user.findUnique({
+      where: { email },
     });
   }
 
@@ -39,16 +29,16 @@ export class UserService {
    * @param id - User ID (UUID)
    */
   async findById(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { id } });
-  }
-
-  /**
-   * Retrieves a user by their userName.
-   *
-   * @param userName - User Name
-   */
-  async findByUserName(userName: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { userName } });
+    if (!id) {
+      // Optionally throw an error or return null if no ID is provided
+      throw new Error("User ID must be provided");
+    }
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        accounts: true,
+      },
+    });
   }
 
   /**
@@ -56,19 +46,28 @@ export class UserService {
    *
    * @param data - Fields required to create a user
    */
-  async createUser(
-    data: Pick<
-      User,
-      | "firstName"
-      | "lastName"
-      | "dob"
-      | "email"
-      | "phone"
-      | "userName"
-      | "password"
-    >,
-  ): Promise<User> {
-    return this.prisma.user.create({ data });
+  async createUser(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    password: string;
+    isActive: boolean;
+    isVerified: boolean;
+    role?: Role;
+  }): Promise<User> {
+    return this.prisma.user.create({
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || "",
+        password: data.password,
+        isActive: data.isActive,
+        isVerified: data.isVerified,
+        role: data.role,
+      },
+    });
   }
 
   /**
@@ -83,5 +82,13 @@ export class UserService {
       where: { id },
       data,
     });
+  }
+
+  /**
+   * Retrieves all user.
+   *
+   */
+  async findAll(): Promise<User[]> {
+    return this.prisma.user.findMany();
   }
 }

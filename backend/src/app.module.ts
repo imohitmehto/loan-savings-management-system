@@ -4,30 +4,50 @@ import { PrismaModule } from "./infrastructure/database/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { UserModule } from "./modules/user/user.module";
 import appConfig from "./config/app.config";
-import { validationSchema } from "./common/validations/joi/validationSchema";
+import { envValidationSchema } from "./common/validations/validationSchema";
 import { LoggerModule } from "./infrastructure/logger/logger.module";
-import { OtpModule } from "./infrastructure/otp/otp.module";
 import { AccountModule } from "./modules/account/account.module";
 import { TransactionModule } from "./modules/transaction/transaction.module";
 import { PolicyModule } from "./modules/policy/policy.module";
-import FileSystemStoredFile from "nestjs-form-data/dist/classes/storage/index";
+import { LoanModule } from "./modules/loan/loan.module";
+import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { JwtAuthGuard } from "./modules/auth/guards/jwt-auth.guard";
+import { HealthModule } from "./modules/health/health.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig],
-      validationSchema,
+      validationSchema: envValidationSchema,
     }),
 
     PrismaModule,
+    LoggerModule,
     AuthModule,
     UserModule,
-    LoggerModule,
-    OtpModule,
     AccountModule,
     TransactionModule,
+    LoanModule,
     PolicyModule,
+    HealthModule,
   ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
+  exports: [LoggerModule],
 })
 export class AppModule {}

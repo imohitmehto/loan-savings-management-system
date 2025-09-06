@@ -9,7 +9,7 @@ import {
 } from "@/validators/registerSchema";
 import InputField from "@/components/auth/InputField";
 import Image from "next/image";
-import Logo from "@/public/images/logo.jpg";
+import Logo from "@/public/images/logo.png";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api/axiosInstance";
 

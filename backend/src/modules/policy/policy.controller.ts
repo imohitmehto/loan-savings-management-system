@@ -9,16 +9,21 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  HttpException,
+  Req,
+  UseInterceptors,
 } from "@nestjs/common";
 import { LoanPolicyService } from "./policy.service";
 import { CreateLoanPolicyDto, UpdateLoanPolicyDto } from "./dtos";
-import { Roles } from "src/common/decorators/roles.decorator";
+import { Roles } from "src/modules/auth/decorators/roles.decorator";
 import { Role } from "@prisma/client";
-import { RolesGuard } from "src/common/guards/roles.guard";
-import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
+import { plainToClass } from "class-transformer";
+import { FileFieldsInterceptor } from "@nestjs/platform-express";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller("policy")
+@Controller("loan-policy")
 export class LoanPolicyController {
   constructor(private readonly service: LoanPolicyService) {}
 
@@ -28,8 +33,28 @@ export class LoanPolicyController {
   @Post("create")
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateLoanPolicyDto) {
-    return this.service.createLoanPolicy(dto);
+  @UseInterceptors(FileFieldsInterceptor([]))
+  async create(@Req() req: any) {
+    try {
+      const body = req.body;
+
+      if (typeof body.rules === "string") {
+        body.rules = JSON.parse(body.rules);
+      }
+
+      if (body.isActive !== undefined) {
+        body.isActive = body.isActive === "true" || body.isActive === true;
+      }
+
+      const dto = plainToClass(CreateLoanPolicyDto, body);
+
+      return await this.service.createLoanPolicy(dto);
+    } catch (error) {
+      throw new HttpException(
+        error.message || "Failed to create loan policy",
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**
@@ -39,13 +64,13 @@ export class LoanPolicyController {
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
   async getAll() {
-    return this.service.getAllActivePolicies();
+    return this.service.getAllPolicies();
   }
 
   /**
    * Admin-only: Get policy by ID
    */
-  @Get("get/:id")
+  @Get("/:id")
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
   async getById(@Param("id") id: string) {
@@ -55,11 +80,29 @@ export class LoanPolicyController {
   /**
    * Admin-only: Update policy by ID
    */
-  @Patch("update/:id")
+  @Patch("/:id")
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
-  async update(@Param("id") id: string, @Body() dto: UpdateLoanPolicyDto) {
-    return this.service.updatePolicy(id, dto);
+  @UseInterceptors(FileFieldsInterceptor([])) // configure field names if expecting files
+  async update(@Param("id") id: string, @Req() req: any) {
+    try {
+      const body = { ...req.body };
+
+      // Normalize isActive to boolean
+      if (body.isActive !== undefined) {
+        body.isActive =
+          body.isActive === true || body.isActive === "true" ? true : false;
+      }
+
+      const dto = plainToClass(UpdateLoanPolicyDto, body);
+
+      return this.service.updatePolicy(id, dto);
+    } catch (error) {
+      throw new HttpException(
+        error.message || "Failed to update loan policy",
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**

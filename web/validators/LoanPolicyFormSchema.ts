@@ -1,83 +1,42 @@
 import { z } from "zod";
+import {
+  FeeType,
+  InterestType,
+  TermPeriod,
+} from "@/utils/enums/loan-policy-enum";
 
-// Loan Policy Schema
 export const LoanPolicyFormSchema = z.object({
-  id: z.string().uuid("Invalid loan policy ID"),
-
   name: z
-    .string({
-      required_error: "Policy name is required",
-    })
+    .string({ required_error: "Policy name is required" })
     .min(1, "Policy name cannot be empty"),
-
   description: z.string().nullable().optional(),
-
+  minAmount: z
+    .number({ required_error: "Minimum loan amount is required" })
+    .positive("Minimum amount must be greater than 0"),
+  maxAmount: z
+    .number({ required_error: "Maximum loan amount is required" })
+    .positive("Maximum amount must be greater than 0"),
+  interestType: z.nativeEnum(InterestType),
   interestRate: z
     .number({ invalid_type_error: "Interest rate must be a number" })
-    .positive("Interest rate must be positive")
-    .nullable()
-    .optional(),
-
-  minCreditScore: z
-    .number({
-      required_error: "Minimum credit score is required",
-      invalid_type_error: "Minimum credit score must be a number",
-    })
-    .int("Minimum credit score must be an integer")
-    .min(0, "Credit score cannot be negative"),
-
-  maxLoanAmount: z
-    .number({
-      required_error: "Maximum loan amount is required",
-      invalid_type_error: "Max loan amount must be a number",
-    })
-    .positive("Maximum loan amount must be greater than 0"),
-
-  rules: z.record(z.any(), {
-    required_error: "Policy rules are required",
-  }),
-
+    .positive("Interest rate must be positive"),
+  termPeriod: z.nativeEnum(TermPeriod),
+  maxTerm: z
+    .number({ required_error: "Maximum term is required" })
+    .int()
+    .positive("Maximum term must be greater than 0"),
+  applicationFeeType: z.nativeEnum(FeeType),
+  applicationFee: z
+    .number({ required_error: "Application fee is required" })
+    .min(0, "Application fee cannot be negative"),
+  processingFeeType: z.nativeEnum(FeeType),
+  processingFee: z
+    .number({ required_error: "Processing fee is required" })
+    .min(0, "Processing fee cannot be negative"),
+  latePaymentPenaltiesType: z.nativeEnum(FeeType),
+  latePaymentPenalties: z
+    .number({ required_error: "Late payment penalty is required" })
+    .min(0, "Late payment penalty cannot be negative"),
+  rules: z.array(z.string()).min(1, "At least one rule required"),
   isActive: z.boolean(),
-
-  createdAt: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "Invalid createdAt date",
-  }),
-
-  updatedAt: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "Invalid updatedAt date",
-  }),
-
-  loans: z
-    .array(
-      z.object({
-        id: z.string().uuid("Invalid loan ID"),
-        loanNumber: z.string().min(1, "Loan number is required"),
-        principal: z
-          .number({ invalid_type_error: "Principal must be a number" })
-          .positive("Principal must be greater than 0"),
-        interestRate: z
-          .number({ invalid_type_error: "Interest rate must be a number" })
-          .positive("Interest rate must be greater than 0"),
-        durationMonths: z
-          .number({ invalid_type_error: "Duration must be a number" })
-          .int("Duration must be an integer")
-          .positive("Duration must be greater than 0"),
-        emiAmount: z
-          .number({ invalid_type_error: "EMI amount must be a number" })
-          .positive("EMI amount must be greater than 0"),
-        startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-          message: "Invalid start date",
-        }),
-        endDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-          message: "Invalid end date",
-        }),
-        status: z.string().min(1, "Status is required"),
-        userId: z.string().uuid("Invalid user ID"),
-        loanTypeId: z.string().uuid("Invalid loan type ID"),
-        policyId: z.string().uuid("Invalid loan policy ID"),
-      }),
-    )
-    .optional(),
 });
-
-export type LoanPolicyType = z.infer<typeof LoanPolicyFormSchema>;

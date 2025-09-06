@@ -8,40 +8,31 @@ export interface OtpOptions {
   includeLowerCase?: boolean;
 }
 
-export class OtpGenerator {
-  static generate(options?: OtpOptions): string {
-    const {
-      length = 6,
-      numericOnly = true,
-      includeUpperCase = false,
-      includeLowerCase = false,
-    } = options || {};
+export function generateOtp(options?: OtpOptions): string {
+  const {
+    length = 6,
+    numericOnly = true,
+    includeUpperCase = false,
+    includeLowerCase = false,
+  } = options || {};
 
-    try {
-      let characters = "";
+  try {
+    let characters = "0123456789";
 
-      if (numericOnly) {
-        characters = "0123456789";
-      } else {
-        characters = "0123456789";
-        if (includeUpperCase) characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        if (includeLowerCase) characters += "abcdefghijklmnopqrstuvwxyz";
-      }
-
-      if (!characters.length) {
-        throw new Error("No characters configured for OTP generation");
-      }
-
-      const otpChars: string[] = [];
-
-      for (let i = 0; i < length; i++) {
-        const index = randomInt(0, characters.length);
-        otpChars.push(characters[index]);
-      }
-
-      return otpChars.join("");
-    } catch (error) {
-      throw new InternalServerErrorException("Failed to generate OTP");
+    if (!numericOnly) {
+      if (includeUpperCase) characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      if (includeLowerCase) characters += "abcdefghijklmnopqrstuvwxyz";
     }
+
+    if (!characters.length) {
+      throw new Error("No characters configured for OTP generation");
+    }
+
+    return Array.from({ length }, () => {
+      const index = randomInt(0, characters.length);
+      return characters[index];
+    }).join("");
+  } catch {
+    throw new InternalServerErrorException("Failed to generate OTP");
   }
 }

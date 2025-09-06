@@ -1,35 +1,20 @@
 "use client";
-import React from "react";
-
 export default function HeroContent() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] w-full text-white text-center px-4 gap-6">
-      <h1 className="text-4xl sm:text-6xl font-extrabold mb-2 drop-shadow-xl tracking-tight">
-        Welcome to{" "}
-        <span className="text-green-300">Sanskar Malvi Swarnkar</span>
-      </h1>
-      <h2 className="text-2xl sm:text-4xl text-green-200 font-bold animate-pulse drop-shadow-md">
+    <header className="w-full flex flex-col items-center text-center gap-2 py-3 px-2 max-w-md mx-auto">
+      <h2 className="text-base sm:text-lg font-bold text-green-200 tracking-wide">
         જય શ્રી કૃષ્ણા
       </h2>
-      <p className="text-lg sm:text-xl max-w-xl mx-auto text-gray-200/80 mt-2">
-        Experience the rich traditions and values of Sanatan Dharma, jewelry
-        artistry, and cultural heritage. Discover stories, community, and the
-        spirit of devotion.
+      <h1 className="font-black text-white leading-tight drop-shadow-md mb-1 text-xl sm:text-3xl md:text-4xl">
+        Sanskar Malvi Swarnkar Community:
+        <span className="block bg-gradient-to-r from-green-300 via-lime-300 to-emerald-400 bg-clip-text text-transparent mt-1">
+          Saving Together, Growing Together
+        </span>
+      </h1>
+      <p className="text-sm sm:text-base max-w-sm text-gray-300 leading-relaxed">
+        Join hands for trust, cultural belonging, and growth—because together,
+        we make a stronger tomorrow.
       </p>
-      <div className="flex gap-4 items-center justify-center mt-4">
-        <a
-          className="rounded-lg bg-gradient-to-r from-green-400 to-emerald-900 px-6 py-3 text-lg font-semibold text-white shadow-lg hover:scale-105 transition"
-          href="#about"
-        >
-          Learn More
-        </a>
-        <a
-          className="rounded-lg border border-green-300 px-6 py-3 text-lg font-semibold text-green-200 hover:bg-green-950/50 transition"
-          href="#community"
-        >
-          Join Community
-        </a>
-      </div>
-    </div>
+    </header>
   );
 }

@@ -13,7 +13,6 @@ enum NomineeRelation {
 }
 
 export const NomineeRelationOptions = [
-  { value: "", label: "Select Relation" },
   ...Object.values(NomineeRelation).map((n) => ({
     value: n,
     label: n.charAt(0) + n.slice(1).toLowerCase(),

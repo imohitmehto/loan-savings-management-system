@@ -52,8 +52,26 @@ export const fetchAllLoanPolicies = (): Promise<LoanPolicy[]> =>
 export const fetchLoanPolicyById = (id: string): Promise<LoanPolicy> =>
   safeApiCall(async () => {
     apiLog(`Fetching loan policy ID: ${id}`);
-    const { data } = await api.get<LoanPolicy>(`/loan-policy/get/${id}`);
+    const { data } = await api.get<LoanPolicy>(`/loan-policy/${id}`);
     if (!data) throw new ApiError("Loan policy not found", 404);
+    return data;
+  });
+
+/**
+ * Update loan policy by ID
+ * ----------------------------------------------------------------
+ * @param id - Loan Policy ID
+ * @param formData - FormData containing updated policy details
+ * @returns Promise<LoanPolicy>
+ * @throws ApiError if update fails
+ */
+export const updateLoanPolicyById = (
+  id: string,
+  formData: FormData,
+): Promise<LoanPolicy> =>
+  safeApiCall(async () => {
+    apiLog(`Updating loan policy ID: ${id}`);
+    const { data } = await api.patch(`/loan-policy/${id}`, formData);
     return data;
   });
 

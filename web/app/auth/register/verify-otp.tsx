@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Logo from "@/public/images/logo.jpg";
+import Logo from "@/public/images/logo.png";
 import api from "@/lib/api/axiosInstance";
 
 export default function VerifyOtpPage() {
   const router = useRouter();
   const [otp, setOtp] = useState("");
-  const [email, setEmail] = useState(""); // You can pass this via query or session
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -57,8 +57,8 @@ export default function VerifyOtpPage() {
     setMessage("");
 
     try {
-      const res = await api.post("/auth/resend-otp", { email });
-      setMessage(res.data.message || "OTP resent successfully");
+      const res = await api.post("/auth/send-otp", { email });
+      setMessage(res.data.message || "OTP sent successfully");
     } catch (err: unknown) {
       if (
         err &&

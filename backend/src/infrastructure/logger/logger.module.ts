@@ -1,9 +1,9 @@
-import { Module } from "@nestjs/common";
-import { LoggerService } from "./logger.service";
+import { Global, Module } from "@nestjs/common";
+import { CustomLogger } from "./logger.service";
 
+@Global()
 @Module({
-  providers: [LoggerService],
-  exports: [LoggerService],
+  providers: [CustomLogger],
+  exports: [CustomLogger],
 })
 export class LoggerModule {}
-// This module provides a custom logger service that can be used throughout the application.

@@ -14,25 +14,31 @@ export class SmsService {
     private readonly configService: ConfigService,
     private readonly template: EmailTemplates,
   ) {
-    const twilioConfig = this.configService.get("twilio");
+    const phoneNumber = this.configService.get("app.twilio.phoneNumber")!;
 
-    this.from = twilioConfig.phoneNumber;
+    this.from = phoneNumber;
 
-    this.twilioClient = new Twilio(twilioConfig.sid, twilioConfig.authToken);
+    this.twilioClient = new Twilio(
+      this.configService.get("app.twilio.sid")!,
+      this.configService.get("app.twilio.authToken")!,
+    );
   }
 
   /**
-   * Sends OTP via SMS using Twilio
-   * @param to recipient phone number
-   * @param otp 6-digit OTP string
+   * Generic function to send SMS using Twilio with template rendering
+   * @param to Recipient phone number (E.164 format recommended)
+   * @param templateName Name of the EJS template file (without extension)
+   * @param data Placeholder replacements for the template
    */
-  async sendOtp(to: string, name: string, otp: string): Promise<void> {
+  async sendSms(
+    to: string,
+    templateName: string,
+    data: Record<string, any>,
+  ): Promise<void> {
     try {
-      const message = await this.template.render("sms", "otp-sms", {
-        name,
-        otp,
-      });
+      const message = await this.template.render("sms", templateName, data);
 
+      // Send SMS through Twilio
       await this.twilioClient.messages.create({
         body: message,
         from: this.from,
@@ -40,7 +46,14 @@ export class SmsService {
       });
     } catch (error) {
       console.error("SMS sending error:", error);
-      throw new InternalServerErrorException("Failed to send OTP SMS");
+      throw new InternalServerErrorException("Failed to send SMS");
     }
+  }
+
+  /**
+   * Sends OTP SMS (wrapper over sendSms)
+   */
+  async sendOtp(to: string, name: string, otp: string): Promise<void> {
+    return this.sendSms(to, "otp-sms", { name, otp });
   }
 }

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Logo from "@/public/images/logo.jpg";
+import Logo from "@/public/images/logo.png";
 import { otpSchema, OTPInput } from "@/validators/otpSchema";
 import { ZodError } from "zod";
 

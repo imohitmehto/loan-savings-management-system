@@ -1,20 +1,23 @@
 "use client";
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import GenericList from "@/components/common/table/GenericList";
-import { Account } from "@/types/Account";
 import { fetchAllAccounts } from "@/lib/api/accounts";
 import AccountTable from "./AccountTable";
+import { useSearchParams } from "next/navigation";
 
-export default function AccountList({
-  isLinkView = false,
-}: {
-  isLinkView?: boolean;
-}) {
+export default function AccountList({ isLinkView = false }) {
+  const searchParams = useSearchParams();
+  const initialStatusFilter = searchParams.get("status") || "";
+  const [filterText, setFilterText] = useState(initialStatusFilter);
+
+  useEffect(() => {
+    setFilterText(initialStatusFilter);
+  }, [initialStatusFilter]);
+
   return (
-    <GenericList<Account>
+    <GenericList
       fetchData={fetchAllAccounts}
-      filterFunction={(acc, filterText) =>
+      filterFunction={(acc, filter) =>
         [
           acc.accountNumber,
           `${acc.firstName} ${acc.lastName}`,
@@ -23,11 +26,13 @@ export default function AccountList({
         ]
           .join(" ")
           .toLowerCase()
-          .includes(filterText.toLowerCase())
+          .includes(filter.toLowerCase())
       }
       renderList={(accounts) => (
         <AccountTable accounts={accounts} isLinkView={isLinkView} />
       )}
+      filterText={filterText}
+      setFilterText={setFilterText}
     />
   );
 }

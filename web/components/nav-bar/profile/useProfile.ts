@@ -1,6 +1,7 @@
-// profile/useProfile.ts
 "use client";
-import { useSession } from "next-auth/react";
+
+import { useState, useEffect } from "react";
+import { fetchProfile } from "@/lib/api/user";
 
 export interface ProfileData {
   name: string;
@@ -9,19 +10,30 @@ export interface ProfileData {
 }
 
 export const useProfile = (): ProfileData => {
-  const { data: session, status } = useSession();
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+  const [name, setName] = useState<string | undefined>(undefined);
+  const [role, setRole] = useState<string | undefined>(undefined);
 
-  if (status === "loading") {
-    return {
-      name: "Loading...",
-      role: "",
-      avatarUrl: undefined,
-    };
-  }
+  useEffect(() => {
+    async function fetchUserProfile() {
+      try {
+        const data = await fetchProfile();
+        setAvatarUrl(data?.account?.photo);
+        setName(data?.firstName + " " + data?.lastName);
+        setRole(data?.role);
+      } catch {
+        setAvatarUrl(undefined);
+        setName(undefined);
+        setRole(undefined);
+      }
+    }
+
+    fetchUserProfile();
+  }, []);
 
   return {
-    name: session?.user?.name ?? "User",
-    role: session?.user?.role ?? "Guest",
-    avatarUrl: session?.user?.image,
+    name: name ?? "User",
+    role: role ?? "Guest",
+    avatarUrl,
   };
 };

@@ -7,8 +7,7 @@ import React, {
   FormEvent,
   ChangeEvent,
 } from "react";
-import { fetchAllAccounts } from "@/lib/api/accounts"; // For borrower list
-import { fetchAllLoans } from "@/lib/api/loans";
+import { fetchAllAccounts } from "@/lib/api/accounts";
 import { fetchAllLoanPolicies } from "@/lib/api/loanPolicies";
 import { Loan, LoanStatus } from "@/types/Loan";
 import { LoanFormSchema } from "@/validators/LoanFormSchema";
@@ -40,8 +39,7 @@ export default function LoanForm({
     startDate: "",
     endDate: "",
     status: LoanStatus.PENDING,
-    userId: "",
-    loanTypeId: "",
+    accountid: "",
     policyId: "",
   };
 
@@ -50,16 +48,14 @@ export default function LoanForm({
   const [accountOptions, setAccountOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const [loanTypeOptions, setLoanTypeOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
   const [policyOptions, setPolicyOptions] = useState<
-    { value: string; label: string }[]
+    { value: string; label: string; policy?: any }[]
   >([]);
+
+  const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
 
   /** -------- Effects -------- */
   useEffect(() => {
-    // Borrowers list (users with accounts)
     fetchAllAccounts()
       .then((accounts) => {
         setAccountOptions(
@@ -69,129 +65,116 @@ export default function LoanForm({
           })),
         );
       })
-      .catch((err) => {
-        console.error("Failed to fetch accounts:", err);
-        setAccountOptions([]);
-      });
+      .catch(() => setAccountOptions([]));
 
-    // Loan types list
-    fetchAllLoans()
-      .then((types) => {
-        setLoanTypeOptions(
-          types.map((type) => ({
-            value: type.id,
-            label: type.user.firstName || "Unnamed Loan Type", // Add a label, fallback if necessary
-          })),
-        );
-      })
-      .catch((err) => {
-        console.error("Failed to fetch loan types:", err);
-        setLoanTypeOptions([]);
-      });
-
-    // Loan policies list
     fetchAllLoanPolicies()
       .then((policies) => {
         setPolicyOptions(
           policies.map((policy) => ({
             value: policy.id,
             label: policy.name,
+            policy,
           })),
         );
       })
-      .catch((err) => {
-        console.error("Failed to fetch loan policies:", err);
-        setPolicyOptions([]);
-      });
+      .catch(() => setPolicyOptions([]));
   }, []);
 
   /** -------- Handlers -------- */
-
-  // Generic change handler
   const handleChange = useCallback(
-    (
-      e: ChangeEvent<
-        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      >,
-    ) => {
-      const { name, value, type } = e.target;
-      setForm((prev) => ({
-        ...prev,
-        [name]:
-          type === "number" ||
-          ["principal", "interestRate", "durationMonths", "emiAmount"].includes(
-            name,
-          )
-            ? Number(value)
-            : value,
-      }));
+    (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const { name, value } = e.target;
+      setForm((prev) => ({ ...prev, [name]: value }));
       if (errors[name]) {
         setErrors((prev) => {
           const { [name]: _, ...rest } = prev;
           return rest;
         });
       }
+
+      // Handle policy change separately
+      if (name === "policyId") {
+        const chosen = policyOptions.find((p) => p.value === value);
+        if (chosen) {
+          setSelectedPolicy(chosen.policy);
+          setForm((prev) => ({
+            ...prev,
+            interestRate: chosen.policy.baseInterestRate,
+            durationMonths: 0,
+          }));
+        }
+      }
     },
-    [errors],
+    [errors, policyOptions],
   );
 
-  // Restrict number fields to numeric input
-  const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNumericChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const sanitized = value
-      .replace(/[^0-9.]/g, "")
-      .replace(/^(\d*\.\d{0,2}).*$/, "$1");
+    const sanitized = value.replace(/[^0-9.]/g, "");
     setForm((prev) => ({ ...prev, [name]: sanitized }));
-    if (errors[name]) {
-      setErrors((prev) => {
-        const { [name]: _, ...rest } = prev;
-        return rest;
-      });
-    }
   };
 
-  // Submit handler
-  const handleSubmit = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
+  const handleTermSelect = (term: number) => {
+    if (!selectedPolicy) return;
+    setForm((prev) => ({
+      ...prev,
+      durationMonths: term,
+      emiAmount: calculateEMI(
+        Number(prev.principal),
+        Number(prev.interestRate),
+        term,
+      ),
+    }));
+  };
 
-      const parsedForm = {
-        ...form,
-        principal: Number(form.principal),
-        interestRate: Number(form.interestRate),
-        durationMonths: Number(form.durationMonths),
-        emiAmount: Number(form.emiAmount),
-      };
+  const calculateEMI = (
+    principal: number,
+    interestRate: number,
+    duration: number,
+  ) => {
+    if (!principal || !interestRate || !duration) return 0;
+    const monthlyRate = interestRate / 100 / 12;
+    return (
+      (principal * monthlyRate * Math.pow(1 + monthlyRate, duration)) /
+      (Math.pow(1 + monthlyRate, duration) - 1)
+    ).toFixed(2);
+  };
 
-      const result = LoanFormSchema.safeParse(parsedForm);
-      if (!result.success) {
-        const fieldErrors: Record<string, string> = {};
-        result.error.errors.forEach((err) => {
-          fieldErrors[err.path.join(".")] = err.message;
-        });
-        setErrors(fieldErrors);
-        return;
-      }
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
 
-      const formData = new FormData();
-      Object.entries(parsedForm).forEach(([key, value]) => {
-        formData.append(key, String(value));
+    const parsedForm = {
+      ...form,
+      principal: Number(form.principal),
+      interestRate: Number(form.interestRate),
+      durationMonths: Number(form.durationMonths),
+      emiAmount: Number(form.emiAmount),
+    };
+
+    const result = LoanFormSchema.safeParse(parsedForm);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        fieldErrors[err.path.join(".")] = err.message;
       });
+      setErrors(fieldErrors);
+      return;
+    }
 
-      try {
-        if (onSubmit) {
-          await onSubmit(formData);
-        }
-      } catch (err) {
-        console.error("Loan submission failed:", err);
-        setErrors((prev) => ({
-          ...prev,
-          form: "An unexpected error occurred. Please try again.",
-        }));
-      }
-    },
-    [form, onSubmit],
-  );
+    const formData = new FormData();
+    Object.entries(parsedForm).forEach(([key, value]) =>
+      formData.append(key, String(value)),
+    );
+
+    try {
+      if (onSubmit) await onSubmit(formData);
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        form: "An unexpected error occurred. Please try again.",
+      }));
+    }
+  };
 
   /** -------- Render -------- */
   return (
@@ -200,50 +183,15 @@ export default function LoanForm({
       onSubmit={handleSubmit}
       noValidate
     >
-      {/* Loan Number */}
-      <TextField
-        label="Loan Number"
-        id="loanNumber"
-        value={form.loanNumber}
-        onChange={handleChange}
-        required
-        error={errors.loanNumber}
-        disabled={readOnly}
-      />
-
       {/* Borrower */}
       <SelectField
-        label="Borrower"
-        id="userId"
-        value={form.userId}
+        label="Account"
+        id="accountid"
+        value={form.accountid}
         onChange={handleChange}
-        options={[{ value: "", label: "Select Borrower" }, ...accountOptions]}
+        options={accountOptions}
         required
-        error={errors.userId}
-        disabled={readOnly}
-      />
-
-      {/* Loan Type */}
-      <SelectField
-        label="Loan Type"
-        id="loanTypeId"
-        value={form.loanTypeId}
-        onChange={handleChange}
-        options={[{ value: "", label: "Select Loan Type" }, ...loanTypeOptions]}
-        required
-        error={errors.loanTypeId}
-        disabled={readOnly}
-      />
-
-      {/* Loan Policy */}
-      <SelectField
-        label="Loan Policy"
-        id="policyId"
-        value={form.policyId}
-        onChange={handleChange}
-        options={[{ value: "", label: "Select Policy" }, ...policyOptions]}
-        required
-        error={errors.policyId}
+        error={errors.accountid}
         disabled={readOnly}
       />
 
@@ -260,83 +208,58 @@ export default function LoanForm({
         disabled={readOnly}
       />
 
-      {/* Interest Rate */}
-      <TextField
-        label="Interest Rate (%)"
-        id="interestRate"
-        type="text"
-        inputMode="decimal"
-        value={form.interestRate}
-        onChange={handleNumericChange}
-        required
-        error={errors.interestRate}
-        disabled={readOnly}
-      />
-
-      {/* Duration Months */}
-      <TextField
-        label="Duration (Months)"
-        id="durationMonths"
-        type="text"
-        inputMode="numeric"
-        value={form.durationMonths}
-        onChange={handleNumericChange}
-        required
-        error={errors.durationMonths}
-        disabled={readOnly}
-      />
-
-      {/* EMI Amount */}
-      <TextField
-        label="EMI Amount"
-        id="emiAmount"
-        type="text"
-        inputMode="decimal"
-        value={form.emiAmount}
-        onChange={handleNumericChange}
-        required
-        error={errors.emiAmount}
-        disabled={readOnly}
-      />
-
-      {/* Start Date */}
-      <TextField
-        label="Start Date"
-        id="startDate"
-        type="date"
-        value={form.startDate ? form.startDate.split("T")[0] : ""}
-        onChange={handleChange}
-        required
-        error={errors.startDate}
-        disabled={readOnly}
-      />
-
-      {/* End Date */}
-      <TextField
-        label="End Date"
-        id="endDate"
-        type="date"
-        value={form.endDate ? form.endDate.split("T")[0] : ""}
-        onChange={handleChange}
-        required
-        error={errors.endDate}
-        disabled={readOnly}
-      />
-
-      {/* Status */}
+      {/* Loan Policy */}
       <SelectField
-        label="Loan Status"
-        id="status"
-        value={form.status}
+        label="Loan Policy"
+        id="policyId"
+        value={form.policyId}
         onChange={handleChange}
-        options={Object.values(LoanStatus).map((status) => ({
-          value: status,
-          label: status,
-        }))}
+        options={policyOptions}
         required
-        error={errors.status}
+        error={errors.policyId}
         disabled={readOnly}
       />
+
+      {/* If a policy is selected, show details */}
+      {selectedPolicy && (
+        <div className="space-y-4 border-t pt-4">
+          <p className="text-gray-700 text-sm">
+            <strong>Interest Rate:</strong> {selectedPolicy.baseInterestRate}%
+          </p>
+          <p className="text-gray-700 text-sm">
+            <strong>Max Term:</strong> {selectedPolicy.maxTerm} months
+          </p>
+
+          {/* Term selector */}
+          <div>
+            <p className="font-semibold mb-2">Select Loan Term:</p>
+            <div className="flex gap-4">
+              {selectedPolicy.allowedTerms?.map((term: number) => (
+                <label key={term} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="durationMonths"
+                    value={term}
+                    checked={form.durationMonths === term}
+                    onChange={() => handleTermSelect(term)}
+                    disabled={readOnly}
+                  />
+                  {term} Months
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* EMI Display */}
+          {form.durationMonths > 0 && (
+            <div className="bg-gray-100 p-3 rounded-md">
+              <p>
+                <strong>EMI:</strong> ₹{form.emiAmount}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Form-level error */}
       {errors.form && (

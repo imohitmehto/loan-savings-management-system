@@ -114,19 +114,32 @@ export default function AccountGroupForm({
     });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const validationErrors = validateFields();
     setErrors(validationErrors);
-    if (Object.keys(validationErrors).length) return;
+
+    if (Object.keys(validationErrors).length) {
+      const firstErrorField = Object.keys(validationErrors)[0];
+
+      const element = document.getElementById(firstErrorField);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        element.focus();
+      }
+      return;
+    }
 
     const formData = new FormData();
     formData.append("name", form.name.trim());
     formData.append("description", form.description.trim());
-
     selectedAccounts.forEach((acc) => formData.append("accountIds", acc.value));
 
-    onSubmit(formData);
+    try {
+      await onSubmit(formData);
+    } catch (error) {
+      console.error("Submit error:", error);
+    }
   };
 
   const handleCancel = () => router.back();

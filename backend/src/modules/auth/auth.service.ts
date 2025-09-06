@@ -4,232 +4,472 @@ import {
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
+  Logger,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UserService } from "../user/user.service";
-import { RegisterDto, LoginDto } from "./dtos";
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  SendOtpDto,
+  VerifyOtpDto,
+} from "./dtos";
 import { Hash } from "src/common/utils/hash.util";
-import { OtpService } from "src/infrastructure/otp/otp.service";
-import { LoggerService } from "../../infrastructure/logger/logger.service";
 import { ConfigService } from "@nestjs/config";
-import { FormatPhoneNumberUtil } from "src/common/utils/format_phone_number.util";
-import { UsernameUtil } from "src/common/utils/user_name.util";
+import {
+  EmailRequiredException,
+  InvalidCredentialsException,
+  InvalidTokenException,
+  UserAlreadyExistsException,
+  AccountSuspendedException,
+} from "./exceptions/auth.exceptions";
+import {
+  JwtPayload,
+  LoginResponse,
+  RegisterResponse,
+} from "./interfaces/auth.interface";
+import { PrismaService } from "src/infrastructure/database/prisma.service";
+import { MailService } from "src/infrastructure/mail/mail.service";
+import { SmsService } from "src/infrastructure/sms/sms.service";
 
 @Injectable()
 export class AuthService {
-  private expiresIn: string;
-  private refreshSecret: string;
-  private refreshExpiresIn: string;
+  private readonly logger = new Logger(AuthService.name);
+
+  // Config values
+  private readonly jwtSecret: string;
+  private readonly jwtRefreshSecret: string;
+  private readonly jwtExpiresIn: string;
+  private readonly jwtRefreshExpiresIn: string;
+
+  // OTP policy
+  private readonly otpTtlMs: number; // milliseconds
+  private readonly otpResendCooldownMs: number; // cooldown between sending OTPs
+  private readonly otpMaxResend: number;
 
   constructor(
-    private jwtService: JwtService,
-    private userService: UserService,
-    private hashService: Hash,
-    private otpService: OtpService,
-    private logger: LoggerService,
+    private readonly jwtService: JwtService,
+    private readonly userService: UserService,
+    private readonly hashService: Hash,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+    private readonly smsService: SmsService,
   ) {
-    const jwt = this.config.get("jwt");
-    this.expiresIn = jwt.expiresIn;
-    this.refreshSecret = jwt.refreshSecret;
-    this.refreshExpiresIn = jwt.refreshExpiresIn;
+    this.jwtSecret = this.config.get<string>("app.jwt.secret");
+    this.jwtRefreshSecret = this.config.get<string>("app.jwt.refreshSecret");
+    this.jwtExpiresIn = this.config.get<string>("app.jwt.expiresIn");
+    this.jwtRefreshExpiresIn = this.config.get<string>(
+      "app.jwt.refreshExpiresIn",
+    );
+
+    this.otpTtlMs = this.config.get<number>("app.otp.ttlMs");
+    this.otpResendCooldownMs = this.config.get<number>(
+      "app.otp.resendCooldownMs",
+    );
+    this.otpMaxResend = this.config.get<number>("app.otp.maxResend");
   }
 
+  // -------------------- Public API -------------------- //
+
+  /**
+   * Registers a new user and triggers OTP verification. Transaction-safe.
+   */
   async register(
     dto: RegisterDto,
-  ): Promise<{ message: string; userName: string }> {
-    const { firstName, lastName, dob, email, phone, password } = dto;
+  ): Promise<{ message: string; data: RegisterResponse }> {
+    const { firstName, lastName, email, phone, password, role } = dto;
 
-    // Check if user already exists by email or phone
-    const existingUser = await this.userService.findUserByIdentifier(
-      email,
-      phone,
-    );
-    if (existingUser) {
-      throw new BadRequestException("User already exists");
-    }
+    if (!email) throw new EmailRequiredException();
+    if (!password) throw new BadRequestException("Password is required");
 
-    // Generate a unique username & hash the password
-    const userName = UsernameUtil.generate(firstName, lastName, dob);
+    // Check existing user
+    const existing = await this.userService.findByEmail(email);
+    if (existing) throw new UserAlreadyExistsException("email");
+
     const hashedPassword = await this.hashService.hashPassword(password);
 
-    // Format the phone number if provided
-    const formattedPhone = phone
-      ? FormatPhoneNumberUtil.formatPhoneNumber(phone)
-      : "";
-
-    // Create the user entry
-    const createdUser = await this.userService.createUser({
-      firstName,
-      lastName,
-      dob: new Date(dob),
-      email,
-      phone: formattedPhone,
-      userName,
-      password: hashedPassword,
-    });
-
-    // Send OTP (email and/or phone)
+    // Create user & initial OTP inside a DB transaction to avoid orphaned OTPs
+    let user;
     try {
-      await this.otpService.sendOtp(createdUser.id, email, formattedPhone);
-      this.logOtpSent(email, formattedPhone);
+      user = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            firstName,
+            lastName,
+            email,
+            phone,
+            password: hashedPassword,
+            isActive: false,
+            isVerified: false,
+            role,
+          },
+        });
+
+        // create initial OTP record using otpService which may encapsulate provider details
+        const otp = this.generateOtp();
+        const expiresAt = new Date(Date.now() + this.otpTtlMs);
+
+        await tx.otp.create({
+          data: {
+            userId: created.id,
+            otp,
+            expiresAt,
+            lastSentAt: new Date(),
+            resendCount: 0,
+            email,
+            phone,
+          },
+        });
+
+        // return created user so we can send OTP
+        return created;
+      });
     } catch (err) {
-      this.logger.error(
-        `Failed to send OTP to ${email || formattedPhone}`,
-        err,
+      this.logger.error("Failed to create user", err);
+      throw new InternalServerErrorException("Failed to create user");
+    }
+
+    // Send OTP asynchronously but still catch errors so caller gets meaningful message
+    try {
+      await this.dispatchOtp(
+        user.email,
+        user.phone,
+        `${user.firstName} ${user.lastName}`,
+        await this.latestOtpForUser(user.id),
       );
+    } catch (err) {
+      this.logger.error(`Failed to dispatch OTP to user ${user.id}`, err);
       throw new InternalServerErrorException(
-        "Failed to send OTP. Please try again later.",
+        "Failed to send OTP. Please try resending OTP.",
       );
     }
 
-    return { message: "OTP sent successfully", userName };
-  }
+    const response: RegisterResponse = {
+      role: user.role,
+      isVerified: user.isVerified,
+    };
 
-  private logOtpSent(email?: string, phone?: string): void {
-    if (email && phone) {
-      this.logger.log(`OTP sent to ${email} and ${phone}`);
-    } else if (email) {
-      this.logger.log(`OTP sent to ${email}`);
-    } else if (phone) {
-      this.logger.log(`OTP sent to ${phone}`);
-    }
+    return {
+      message: "User registered successfully. OTP sent to email/phone.",
+      data: response,
+    };
   }
 
   /**
-   * Verifies user's account via OTP and marks them as verified.
-   * @param userName - Unique username to identify user.
-   * @param otp - OTP provided by user for verification.
-   * @returns Success message if OTP is valid.
+   * Verify OTP provided by user. Marks user verified and active on success.
    */
-  async verify(userName: string, otp: string): Promise<{ message: string }> {
-    // Step 1: Lookup user by username
-    const user = await this.userService.findByUserName(userName);
-    if (!user) {
-      throw new NotFoundException("User not found");
+  async verifyOtp(dto: VerifyOtpDto): Promise<{ message: string }> {
+    const { email, otp } = dto;
+    if (!email) throw new EmailRequiredException();
+    if (!otp) throw new BadRequestException("OTP is required");
+
+    const user = await this.userService.findByEmail(email);
+    if (!user)
+      throw new NotFoundException("No user found with the provided email");
+
+    // Get latest OTP
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!otpRecord)
+      throw new BadRequestException("No OTP found. Please request a new one.");
+
+    if (otpRecord.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException("OTP has expired");
     }
 
-    const userId = user.id;
-
-    // Step 2: Validate OTP for that user
-    const isOtpValid = await this.otpService.verifyOtp(userId, otp);
-    if (!isOtpValid) {
-      throw new BadRequestException("Invalid or expired OTP");
+    if (otpRecord.verifiedAt) {
+      return { message: "OTP already verified" };
     }
 
-    // Step 3: Mark user as verified
-    await this.userService.updateUser(userId, { isVerified: true });
+    if (otpRecord.otp !== otp) {
+      // increase failed attempts counter if you maintain one
+      throw new BadRequestException("Invalid OTP");
+    }
 
-    // Step 4: Return success message
+    // Mark OTP verified and activate user in a transaction
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.otp.update({
+          where: { id: otpRecord.id },
+          data: { verifiedAt: new Date() },
+        });
+        await tx.user.update({
+          where: { id: user.id },
+          data: { isVerified: true, isActive: true, lastLogin: new Date() },
+        });
+      });
+    } catch (err) {
+      this.logger.error("Failed to mark OTP verified/activate user", err);
+      throw new InternalServerErrorException("Failed to verify account");
+    }
+
     return { message: "Account verified successfully" };
   }
 
   /**
-   * Resends OTP to the user via email or phone.
-   * @param data - Object containing the user's username.
-   * @returns Message confirming OTP delivery.
+   * Public endpoint to request an OTP for an email.
    */
-  async resendOtp(data: { userName: string }): Promise<{ message: string }> {
-    // Step 1: Fetch user by username
-    const user = await this.userService.findByUserName(data.userName);
-    if (!user) {
-      throw new NotFoundException("User not found");
+  async requestOtp(dto: SendOtpDto): Promise<{ message: string }> {
+    if (!dto.email) throw new EmailRequiredException();
+
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException("Invalid email");
+
+    // Rate-limit / cooldown checks
+    const latestOtp = await this.prisma.otp.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+    if (latestOtp) {
+      const sinceLastMs = Date.now() - latestOtp.lastSentAt.getTime();
+      if (sinceLastMs < this.otpResendCooldownMs) {
+        throw new BadRequestException(
+          "Please wait before requesting another OTP",
+        );
+      }
+      if ((latestOtp.resendCount ?? 0) >= this.otpMaxResend) {
+        throw new BadRequestException(
+          "OTP resend limit reached. Contact support.",
+        );
+      }
     }
 
-    const { id: userId, email, phone } = user;
+    // Generate and store OTP
+    const otp = this.generateOtp();
+    const expiresAt = new Date(Date.now() + this.otpTtlMs);
 
-    // Step 2: Send OTP via preferred method
-    await this.otpService.sendOtp(userId, email, phone);
+    await this.storeOrUpdateOtp(
+      user.id,
+      otp,
+      expiresAt,
+      user.email,
+      user.phone,
+    );
 
-    // Step 3: Confirm resend
-    return { message: "OTP resent successfully" };
+    // Dispatch the OTP
+    await this.dispatchOtp(
+      user.email,
+      user.phone,
+      `${user.firstName} ${user.lastName}`,
+      otp,
+    );
+
+    return { message: "OTP sent successfully" };
   }
 
   /**
-   * Handles user login by validating credentials and issuing tokens.
-   * If user is not verified, it triggers OTP resend and blocks login.
+   * Login flow. Returns access + refresh tokens and user info.
    */
-  async login(dto: LoginDto): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: { id: string; userName: string };
-  }> {
-    const { userName, password, rememberMe = false } = dto;
+  async login(dto: LoginDto): Promise<LoginResponse> {
+    const { email, password, rememberMe = false } = dto;
+    if (!email || !password)
+      throw new BadRequestException("Email and password are required");
 
-    // Step 1: Find user
-    const user = await this.userService.findByUserName(userName);
+    const user = await this.userService.findByEmail(email);
+    if (!user) throw new InvalidCredentialsException();
 
-    // Step 2: Validate credentials
-    const credentialsAreInvalid =
-      !user ||
-      !(await this.hashService.comparePasswords(password, user.password));
-    if (credentialsAreInvalid) {
-      throw new UnauthorizedException("Invalid login credentials provided.");
-    }
+    const match = await this.hashService.comparePasswords(
+      password,
+      user.password,
+    );
+    if (!match) throw new InvalidCredentialsException();
 
-    // Step 3: Check verification
     if (!user.isVerified) {
-      await this.resendOtp({ userName });
+      // send OTP to verify and inform user
+      await this.requestOtp({ email: user.email } as SendOtpDto);
+      this.logger.warn(`Unverified account login attempt: ${user.email}`);
       throw new UnauthorizedException(
-        "Account not verified. Please verify the OTP sent to your email/phone before logging in.",
+        "Account not verified. OTP sent to your email.",
       );
     }
 
-    const name = user.firstName + " " + user.lastName;
+    if (!user.isActive) throw new AccountSuspendedException();
 
-    // Step 4: Build token payload
-    const payload = {
+    const payload: JwtPayload = {
       sub: user.id,
-      name: name,
-      userName: user.userName,
+      email: user.email,
       role: user.role,
     };
 
-    // Step 5: Compute dynamic expiry
-    const accessTokenExpiry = rememberMe ? "30d" : this.expiresIn;
-    const refreshTokenExpiry = rememberMe ? "60d" : this.refreshExpiresIn;
+    const accessTtl = rememberMe ? "15d" : this.jwtExpiresIn;
+    const refreshTtl = rememberMe ? "30d" : this.jwtRefreshExpiresIn;
 
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: accessTokenExpiry,
-    });
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.jwtSecret,
+        expiresIn: accessTtl,
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.jwtRefreshSecret,
+        expiresIn: refreshTtl,
+      }),
+    ]);
 
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: refreshTokenExpiry,
-      secret: this.refreshSecret,
-    });
+    // Update last login but don't block response on DB latency
+    this.updateLastLogin(user.id).catch((err) =>
+      this.logger.warn("Failed to update last login", err),
+    );
 
-    // Step 6: Return enriched response
     return {
-      accessToken,
-      refreshToken,
       user: {
         id: user.id,
-        userName: user.userName,
+        firstName: user.firstName,
+        lastName: user.lastLogin,
+        role: user.role,
+        email: user.email,
+        phone: phone,
+        isVerified: user.isVerified,
+        lastLogin: user.lastLogin,
       },
+      tokens: { accessToken, refreshToken },
     };
   }
 
   /**
-   * Returns profile info of currently authenticated user.
-   * Includes only non-sensitive public fields.
+   * Refresh access & refresh tokens using a valid refresh token.
    */
-  async me(userId: string): Promise<{
-    id: string;
-    userName: string;
-    isVerified: boolean;
-    createdAt: Date;
-  }> {
-    const user = await this.userService.findById(userId);
+  async refreshTokens(
+    dto: RefreshTokenDto,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(
+        dto.refreshToken,
+        { secret: this.jwtRefreshSecret },
+      );
 
-    if (!user) {
-      throw new NotFoundException("User not found");
+      const user = await this.userService.findById(payload.sub);
+      if (!user) throw new InvalidTokenException();
+      if (!user.isActive) throw new UnauthorizedException("Account suspended");
+
+      const tokens = await this.generateTokens({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+      });
+      this.logger.log(`Tokens refreshed for user: ${user.id}`);
+      return tokens;
+    } catch (err) {
+      this.logger.warn("Refresh token invalid", (err as Error).message);
+      throw new InvalidTokenException();
     }
+  }
 
-    return {
-      id: user.id,
-      userName: user.userName,
-      isVerified: user.isVerified,
-      createdAt: user.createdAt,
-    };
+  // -------------------- Internal helpers -------------------- //
+
+  private async generateTokens(payload: JwtPayload) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.jwtSecret,
+        expiresIn: this.jwtExpiresIn,
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.jwtRefreshSecret,
+        expiresIn: this.jwtRefreshExpiresIn,
+      }),
+    ]);
+    return { accessToken, refreshToken };
+  }
+
+  private async updateLastLogin(userId: string): Promise<void> {
+    try {
+      await this.userService.updateUser(userId, { lastLogin: new Date() });
+    } catch (err) {
+      this.logger.warn("Failed to update last login", err);
+    }
+  }
+
+  private generateOtp(length = 6) {
+    // numeric OTP with leading zeros allowed
+    const max = 10 ** length;
+    const num = Math.floor(Math.random() * max)
+      .toString()
+      .padStart(length, "0");
+    return num;
+  }
+
+  private async latestOtpForUser(userId: string): Promise<string> {
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    return otpRecord?.otp ?? this.generateOtp();
+  }
+
+  private async storeOrUpdateOtp(
+    userId: string,
+    otp: string,
+    expiresAt: Date,
+    email: string,
+    phone?: string | null,
+  ) {
+    const existing = await this.prisma.otp.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    const now = new Date();
+
+    try {
+      if (existing) {
+        await this.prisma.otp.update({
+          where: { id: existing.id },
+          data: {
+            otp,
+            expiresAt,
+            lastSentAt: now,
+            resendCount: { increment: 1 },
+            email,
+            phone,
+          },
+        });
+      } else {
+        await this.prisma.otp.create({
+          data: {
+            userId,
+            otp,
+            expiresAt,
+            lastSentAt: now,
+            resendCount: 0,
+            email,
+            phone,
+          },
+        });
+      }
+    } catch (err) {
+      this.logger.error("OtpSaveError", err);
+      throw new InternalServerErrorException("Failed to generate OTP");
+    }
+  }
+
+  private async dispatchOtp(
+    email?: string | null,
+    phone?: string | null,
+    userName?: string,
+    otp?: string,
+  ) {
+    try {
+      const tasks = [] as Promise<any>[];
+      if (email && userName && otp) {
+        tasks.push(
+          this.mailService.sendMail(email, "otp-email", {
+            name: userName,
+            otp,
+            subject: "Your One-Time Password (OTP)",
+          }),
+        );
+      }
+      if (phone && userName && otp) {
+        tasks.push(this.smsService.sendOtp(phone, userName, otp));
+      }
+
+      await Promise.all(tasks);
+    } catch (err) {
+      this.logger.error("OtpDispatchError", err);
+      throw new InternalServerErrorException("Failed to send OTP");
+    }
   }
 }

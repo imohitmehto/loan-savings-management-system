@@ -6,6 +6,13 @@ interface DecodedToken {
   sub?: string;
   name?: string;
   userName?: string;
+  exp?: number;
+}
+
+interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn?: string;
 }
 
 export async function authorizeUser(credentials: {
@@ -17,7 +24,6 @@ export async function authorizeUser(credentials: {
     return null;
   }
 
-  // Safely coerce rememberMe, as it may be "true"/"false"/undefined/boolean
   const rememberMe =
     credentials.rememberMe === true || credentials.rememberMe === "true";
 
@@ -27,6 +33,7 @@ export async function authorizeUser(credentials: {
       password: credentials.password,
       rememberMe,
     });
+
 
     if (!data?.accessToken || !data?.refreshToken) {
       return null;
@@ -48,11 +55,45 @@ export async function authorizeUser(credentials: {
       rememberMe,
     };
   } catch (error) {
-    // Only log SAFE messages in development
     if (process.env.NODE_ENV === "development") {
-      // Do not log credentials, tokens, or passwords!
       console.error("Login error:", error);
     }
-    return null; // never leak internal error messages
+    return null;
+  }
+}
+
+export async function refreshAccessToken(token: any) {
+  try {
+    // Create a new axios instance to avoid circular dependency
+    const refreshApi = require("axios").create({
+      baseURL: process.env.NEXT_PUBLIC_API_URL,
+      withCredentials: true,
+      timeout: 10000,
+    });
+
+    const response = await refreshApi.post("/auth/refresh", {
+      refreshToken: token.refreshToken,
+    });
+
+    const { accessToken, refreshToken, expiresIn } = response.data;
+
+    if (!accessToken) {
+      throw new Error("No access token received from refresh endpoint");
+    }
+
+    return {
+      ...token,
+      accessToken,
+      refreshToken: refreshToken || token.refreshToken, // Use new refresh token if provided
+      accessTokenExpires: Date.now() + (expiresIn || 15 * 60) * 1000, // Default to 15 minutes
+    };
+  } catch (error) {
+    console.error("Refresh token error:", error);
+
+    // Return token with error flag - this will trigger logout
+    return {
+      ...token,
+      error: "RefreshAccessTokenError",
+    };
   }
 }

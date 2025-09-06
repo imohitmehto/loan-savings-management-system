@@ -1,21 +1,34 @@
-export class UsernameUtil {
-  static generate(
+import { Injectable } from "@nestjs/common";
+import { UserService } from "src/modules/user/user.service";
+
+@Injectable()
+export class UserNameUtil {
+  constructor(private readonly userService: UserService) {}
+
+  /**
+   * Generates a unique username based on firstName and lastName.
+   */
+  async generateUniqueUsername(
     firstName: string,
     lastName: string,
-    dob: Date | string,
-  ): string {
+  ): Promise<string> {
     const safeFirst = firstName.trim().toLowerCase();
     const safeLast = lastName.trim().toLowerCase();
+    const fInitials = safeFirst.slice(0, 2);
+    const lInitials = safeLast.slice(0, 2);
 
-    const fInitials = safeFirst.slice(0, 2); // First two of first name
-    const lInitials = safeLast.slice(0, 2); // First two of last name
+    let username: string = "";
+    let isUnique = false;
 
-    const randomDigits = Math.floor(100 + Math.random() * 900); // 3-digit random
+    while (!isUnique) {
+      const randomDigits1 = Math.floor(100 + Math.random() * 900);
+      const randomDigits2 = Math.floor(100 + Math.random() * 900);
+      username = `${fInitials}${randomDigits1}${lInitials}${randomDigits2}`;
 
-    const dateObj = new Date(dob);
-    const day = dateObj.getDate().toString().padStart(2, "0");
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+      // Check if username already exists using UserService
+      isUnique = !(await this.userService.findByUserName(username));
+    }
 
-    return `${fInitials}${randomDigits}${lInitials}${day}${month}`;
+    return username;
   }
 }

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Logo from "@/public/images/logo.jpg";
+import Logo from "@/public/images/logo.png";
 import { loginSchema } from "@/validators/loginSchema";
 import InputField from "@/components/auth/InputField";
 import { signIn } from "next-auth/react";
@@ -108,7 +108,7 @@ export default function LoginForm() {
         </label>
         <Link
           href="/auth/forgot-password"
-          className="text-blue-500 hover:underline"
+          className="text-black hover:underline"
         >
           Forgot Password?
         </Link>

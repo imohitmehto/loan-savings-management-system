@@ -51,13 +51,14 @@ export default function TopBar() {
     ],
     loan: [
       { label: "All Loans", href: "/loans" },
-      { label: "Loan Policies", href: "/loans/policies" },
       { label: "Apply for Loan", href: "/loans/apply" },
+      { label: "All Loan Policies", href: "/loans/policies" },
+      { label: "New Loan Policy", href: "/loans/policies/new" },
       { label: "Loan Calculator", href: "/loans/calculator" },
     ],
     reports: [
-      { label: "Financial Reports", href: "/reports/financial" },
-      { label: "Transaction Reports", href: "/reports/transactions" },
+      { label: "Financial Reports", href: "/reports" },
+      { label: "Transaction Reports", href: "/reports/" },
       { label: "Loan Reports", href: "/reports/loans" },
       { label: "Monthly Summary", href: "/reports/monthly" },
       { label: "Annual Reports", href: "/reports/annual" },

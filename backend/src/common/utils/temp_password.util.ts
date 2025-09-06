@@ -1,28 +1,23 @@
 import * as crypto from "crypto";
 
 /**
- * Utility class to generate secure temporary passwords.
+ * Generates a random password using a secure charset.
+ *
+ * @param length - Desired length of password (default: 12)
+ * @returns Secure random string
  */
-export class TempPasswordUtil {
-  /**
-   * Generates a random password using a secure charset.
-   *
-   * @param length - Desired length of password (default: 12)
-   * @returns Secure random string
-   */
-  static generate(length = 12): string {
-    const charset =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$!";
-    const charsetLength = charset.length;
+export function generateTempPassword(length = 10): string {
+  const charset =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$!";
+  const charsetLength = charset.length;
 
-    const buffer = crypto.randomBytes(length);
-    let password = "";
+  const buffer = crypto.randomBytes(length);
+  let password = "";
 
-    for (let i = 0; i < length; i++) {
-      const index = buffer[i] % charsetLength;
-      password += charset.charAt(index);
-    }
-
-    return password;
+  for (let i = 0; i < length; i++) {
+    const index = buffer[i] % charsetLength;
+    password += charset.charAt(index);
   }
+
+  return password;
 }

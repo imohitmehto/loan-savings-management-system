@@ -1,25 +1,26 @@
-import { Injectable, LoggerService as NestLoggerService } from "@nestjs/common";
+import { Logger, Injectable, Scope } from "@nestjs/common";
 
-@Injectable()
-export class LoggerService implements NestLoggerService {
+@Injectable({ scope: Scope.TRANSIENT })
+export class CustomLogger extends Logger {
   log(message: string) {
-    console.log(`[LOG] ${new Date().toISOString()} - ${message}`);
+    super.log(message);
+    // Add more log transports or formatting here
   }
 
-  error(message: string, trace?: string) {
-    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`);
-    if (trace) console.error(trace);
+  error(message: string, trace: string) {
+    super.error(message, trace);
+    // Send error logs to external monitoring system here
   }
 
   warn(message: string) {
-    console.warn(`[WARN] ${new Date().toISOString()} - ${message}`);
+    super.warn(message);
   }
 
   debug(message: string) {
-    console.debug(`[DEBUG] ${new Date().toISOString()} - ${message}`);
+    super.debug(message);
   }
 
   verbose(message: string) {
-    console.info(`[VERBOSE] ${new Date().toISOString()} - ${message}`);
+    super.verbose(message);
   }
 }

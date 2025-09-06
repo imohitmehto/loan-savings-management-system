@@ -3,12 +3,12 @@ import {
   InputHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
-import inputErrorClass from "@/utils/inputErrorClass";
+import inputErrorClass from "@/utils/inputErrorClass.util";
 
-// Shared props
 type BaseProps = {
   label: string;
   id: string;
+  name?: string; // Optional name prop, defaults to id
   value: string | number;
   onChange: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
   required?: boolean;
@@ -47,6 +47,7 @@ type TextFieldProps = BaseProps &
 export default function TextField({
   label,
   id,
+  name,
   value,
   onChange,
   required = false,
@@ -59,6 +60,7 @@ export default function TextField({
   rows = 3,
   ...rest
 }: TextFieldProps) {
+  const inputName = name || id;
   const errorId = `${id}-error`;
 
   return (
@@ -72,7 +74,7 @@ export default function TextField({
       {multiline ? (
         <textarea
           id={id}
-          name={id}
+          name={inputName}
           value={value ?? ""}
           onChange={onChange}
           required={required}
@@ -83,17 +85,17 @@ export default function TextField({
           aria-describedby={error ? errorId : undefined}
           {...rest}
           className={inputErrorClass(
-            id,
-            error ? { [id]: error } : {},
+            inputName,
+            error ? { [inputName]: error } : {},
             `mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-1
-            ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`,
+            ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`
           )}
         />
       ) : (
         <input
           type={type}
           id={id}
-          name={id}
+          name={inputName}
           value={value ?? ""}
           onChange={onChange}
           required={required}
@@ -104,10 +106,10 @@ export default function TextField({
           aria-describedby={error ? errorId : undefined}
           {...rest}
           className={inputErrorClass(
-            id,
-            error ? { [id]: error } : {},
+            inputName,
+            error ? { [inputName]: error } : {},
             `mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-1
-            ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`,
+            ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`
           )}
         />
       )}

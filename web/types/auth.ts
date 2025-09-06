@@ -1,5 +1,3 @@
-//types/auth.ts
-
 "use client";
 export type RegisterInput = {
   name: string;

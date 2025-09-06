@@ -11,7 +11,7 @@ import { UserModule } from "../user/user.module";
 import { LoggerModule } from "src/infrastructure/logger/logger.module";
 import { CommonModule } from "src/common/common.module";
 import { OtpModule } from "../../infrastructure/otp/otp.module";
-import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 @Module({
   imports: [
@@ -21,9 +21,9 @@ import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get("JWT_SECRET"),
+        secret: config.get<string>("app.jwt.secret"),
         signOptions: {
-          expiresIn: config.get("JWT_EXPIRES_IN"),
+          expiresIn: config.get<string>("app.jwt.expiresIn"),
         },
       }),
     }),

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import LoanPolicyList from "@/components/loan/loanPolicyForm/LoanPolicyList";
+import LoanPolicyList from "@/components/loan/loan-PolicyForm/LoanPolicyList";
 import NavigationButton from "@/components/common/button/NavigationButton";
 
 export default function AllLoanPoliciesPage() {

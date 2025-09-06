@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/database/prisma.service";
 import {
@@ -14,21 +15,35 @@ import {
 } from "./dtos";
 import { AccountNumberUtil } from "../../common/utils/account_number.util";
 import { Hash } from "src/common/utils/hash.util";
-import { Account, AccountGroup } from "@prisma/client";
-import { TempPasswordUtil } from "src/common/utils/temp_password.util";
+import { Account, AccountGroup, Role } from "@prisma/client";
+import { generateTempPassword } from "src/common/utils/temp_password.util";
 import { UserService } from "../user/user.service";
-import { FormatPhoneNumberUtil } from "src/common/utils/format_phone_number.util";
-import { UsernameUtil } from "src/common/utils/user_name.util";
+import { formatPhoneNumber } from "src/common/utils/format_phone_number.util";
 import { toPrismaUpdate } from "src/common/utils/object.util";
+import { ConfigService } from "@nestjs/config";
+import { MailService } from "src/infrastructure/mail/mail.service";
+import { SmsService } from "src/infrastructure/sms/sms.service";
+import { UserNameUtil } from "src/common/utils/user_name.util";
+import { AccountAlreadyExistsException } from "./exceptions/user-exceptions";
+import { OtpService } from "src/infrastructure/otp/otp.service";
 
 @Injectable()
 export class AccountService {
+
+  private readonly logger = new Logger(AccountService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
+    private readonly userNameUtil: UserNameUtil,
+    private readonly mailService: MailService,
+    private readonly smsService: SmsService,
     private readonly accountNumberUtil: AccountNumberUtil,
     private readonly hashService: Hash,
-  ) {}
+    private readonly configService: ConfigService,
+    private readonly otpService: OtpService,
+
+  ) { }
 
   /**
    * Fetch all accounts.
@@ -48,7 +63,6 @@ export class AccountService {
         user: true,
         group: true,
         transactions: true,
-        profitShares: true,
         addresses: true,
         nominees: true,
       },
@@ -72,49 +86,77 @@ export class AccountService {
     },
   ): Promise<{ message: string; data: Account }> {
     try {
-      // Map uploaded file names
+      console.log("dto", dto);
+      // Map uploaded file names (filenames only)
       this.mapUploadedFiles(dto, files);
 
-      // Ensure user exists or create new one
-      const userId = await this.ensureUserExists(dto);
+      // Generate accessible URLs for uploaded files
+      const baseUrl = process.env.BASE_URL;
+      if (dto.photo) {
+        dto.photo = `${baseUrl}/uploads/account/${dto.photo}`;
+      }
+      if (dto.panCard) {
+        dto.panCard = `${baseUrl}/uploads/account/${dto.panCard}`;
+      }
+      if (dto.aadhaarCard) {
+        dto.aadhaarCard = `${baseUrl}/uploads/account/${dto.aadhaarCard}`;
+      }
+
+      const user = await this.userService.findByEmail(dto.email);
+
+      if (user) {
+        const account = await this.prisma.account.findUnique({ where: { dto.email } })
+
+        if (account) throw new AccountAlreadyExistsException(dto.email);
+      }
+      if (!user) {
+
+        const tempPassword = generateTempPassword();
+        const password = await this.hashService.hashPassword(tempPassword);
+        const data = {
+          email: dto.email,
+          password: password,
+          phone: dto.phone,
+          isVerified: false,
+          isActive: false,
+          role: Role.CUSTOMER,
+        }
+        const newUser = await this.userService.createUser(data);
+
+        try {
+          await this.otpService.sendOtp(newUser.id, newUser.email);
+        } catch (err) {
+          this.logger.error(`Failed to send OTP to ${newUser.email}`, err);
+          throw new InternalServerErrorException(
+            "Failed to send OTP. Please try again later.",
+          );
+        }
+      }
 
       // Generate unique account number
       const accountNumber =
         await this.accountNumberUtil.generateAccountNumber();
 
-      // Validate parent account requirement
-      if (dto.isChildAccount && !dto.parentAccountId) {
-        throw new BadRequestException(
-          "Parent account ID is required for child accounts",
-        );
-      }
-
-      // Process nominees + addresses
-      const nomineeData = this.prepareNomineeData(dto);
-      const addressData = this.prepareAddressData(dto);
 
       // Create account
       const account = await this.prisma.account.create({
         data: {
           accountNumber,
-          firstName: dto.firstName ?? "",
-          lastName: dto.lastName ?? "",
+          firstName: dto.firstName,
+          lastName: dto.lastName,
           fatherSpouse: dto.fatherSpouse ?? "",
           occupation: dto.occupation,
           companyInstitute: dto.companyInstitute ?? "",
-          email: dto.email ?? "",
+          email: dto.email,
           phone: dto.phone ?? "",
           gender: dto.gender,
-          dob: new Date(dto.dob),
+          dob: dto.dob,
           type: dto.type,
-          isChildAccount: dto.isChildAccount ?? false,
-          parentAccountId: dto.parentAccountId || undefined,
           groupId: dto.groupId || undefined,
           accountOpeningFee: dto.accountOpeningFee ?? 0,
           photo: dto.photo ?? "",
           panCard: dto.panCard ?? "",
           aadhaarCard: dto.aadhaarCard ?? "",
-          // status: dto.status ?? "ACTIVE",
           userId: userId ?? "",
           nominees: nomineeData,
           addresses: addressData,
@@ -125,9 +167,55 @@ export class AccountService {
         },
       });
 
+      if (!user) {
+        throw new InternalServerErrorException(
+          "User not found after account creation",
+        );
+      }
+
+      // Assuming you have a way to get the plain password at this point.
+      // If you store hashed passwords only, consider generating a temp password instead.
+      const userName = user.userName;
+      const password = user.password; // Adapt accordingly
+      if (!password) {
+        throw new InternalServerErrorException(
+          "User password not available for sending",
+        );
+      }
+
+      // Send email if email exists
+      if (dto.email) {
+        try {
+          await this.mailService.sendMail(dto.email, "new-user-email", {
+            name: `${dto.firstName} ${dto.lastName}`,
+            username: userName,
+            password: password,
+            subject: "Welcome to Our Service - Your Account Details",
+          });
+        } catch (error) {
+          console.error("Failed to send welcome email:", error);
+        }
+      }
+
+      // Send SMS if phone exists
+      if (dto.phone) {
+        try {
+          await this.smsService.sendSms(dto.phone, "new-user-sms", {
+            name: `${dto.firstName} ${dto.lastName}`,
+            username: userName,
+            password: password,
+          });
+        } catch (error) {
+          console.error("Failed to send welcome SMS:", error);
+        }
+      }
+
       return { message: "Account created successfully", data: account };
     } catch (error) {
       console.error("CreateAccountError:", error);
+      if (error instanceof BadRequestException) {
+        throw error; // Pass known BadRequestException errors to controller
+      }
       throw new InternalServerErrorException("Failed to create account");
     }
   }
@@ -182,12 +270,24 @@ export class AccountService {
     return true;
   }
 
+  async ValidateEmail(email: string): Promise<boolean> {
+
+    const account = await this.prisma.account.findUnique({ where: { email } })
+
+    if (!account) return false;
+    else return true;
+  }
+
+
+
+  /*  *************** ACCOUNT GROUP ***************  */
+
   /**
    * Fetch all account groups sorted by name.
    */
   async getAllAccountGroup(): Promise<AccountGroup[]> {
     return this.prisma.accountGroup.findMany({
-      include: { accounts: true, profits: true },
+      include: { accounts: true },
       orderBy: { name: "asc" },
     });
   }
@@ -198,7 +298,7 @@ export class AccountService {
   async getAccountGroupById(id: string): Promise<AccountGroup> {
     const accountGroup = await this.prisma.accountGroup.findUnique({
       where: { id },
-      include: { accounts: true, profits: true },
+      include: { accounts: true },
     });
     if (!accountGroup) {
       throw new NotFoundException(`Account Group with ID ${id} not found`);
@@ -217,15 +317,11 @@ export class AccountService {
         accounts: dto.accountIds?.length
           ? { connect: dto.accountIds.map((id) => ({ id })) }
           : undefined,
-        profits: dto.profitIds?.length
-          ? { connect: dto.profitIds.map((id) => ({ id })) }
-          : undefined,
       },
       include: {
         accounts: {
           select: { accountNumber: true, firstName: true, lastName: true },
         },
-        profits: true,
       },
     });
   }
@@ -247,27 +343,26 @@ export class AccountService {
     return this.prisma.accountGroup.update({
       where: { id },
       data: {
-        name: dto.name ?? undefined,
-        description: dto.description ?? undefined,
+        name: dto.name,
+        description: dto.description ?? "",
         ...(dto.addAccountIds?.length || dto.removeAccountIds?.length
           ? {
-              accounts: {
-                connect:
-                  dto.addAccountIds?.map((accountId) => ({ id: accountId })) ??
-                  [],
-                disconnect:
-                  dto.removeAccountIds?.map((accountId) => ({
-                    id: accountId,
-                  })) ?? [],
-              },
-            }
+            accounts: {
+              connect:
+                dto.addAccountIds?.map((accountId) => ({ id: accountId })) ??
+                [],
+              disconnect:
+                dto.removeAccountIds?.map((accountId) => ({
+                  id: accountId,
+                })) ?? [],
+            },
+          }
           : {}),
       },
       include: {
         accounts: {
           select: { accountNumber: true, firstName: true, lastName: true },
         },
-        profits: true,
       },
     });
   }
@@ -291,54 +386,28 @@ export class AccountService {
   /**
    * Map uploaded file names into the DTO.
    */
-  private mapUploadedFiles(dto: any, files?: any) {
-    dto.photo = files?.photo || dto.photo || "";
-    dto.panCard = files?.panCard || dto.panCard || "";
-    dto.aadhaarCard = files?.aadhaarCard || dto.aadhaarCard || "";
-  }
-
-  /**
-   * Creates a user if one doesn't exist for provided email/phone.
-   */
-  private async ensureUserExists(
+  private mapUploadedFiles(
     dto: CreateAccountDto,
-  ): Promise<string | undefined> {
-    if (!dto.email && !dto.phone) return undefined;
-
-    const existingUser = await this.userService.findUserByIdentifier(
-      dto.email,
-      dto.phone,
-    );
-
-    if (existingUser) return existingUser.id;
-
-    const userName = UsernameUtil.generate(
-      dto.firstName,
-      dto.lastName,
-      dto.dob,
-    );
-    const formattedPhone = dto.phone
-      ? FormatPhoneNumberUtil.formatPhoneNumber(dto.phone)
-      : "";
-    const password = TempPasswordUtil.generate();
-    const hashedPassword = await this.hashService.hashPassword(password);
-
-    const createdUser = await this.userService.createUser({
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      dob: new Date(dto.dob),
-      email: dto.email ?? "",
-      phone: formattedPhone,
-      userName,
-      password: hashedPassword,
-    });
-
-    return createdUser.id;
+    files?: {
+      photo?: Express.Multer.File[];
+      panCard?: Express.Multer.File[];
+      aadhaarCard?: Express.Multer.File[];
+    },
+  ) {
+    if (files?.photo?.[0]) {
+      dto.photo = files.photo[0].filename;
+    }
+    if (files?.panCard?.[0]) {
+      dto.panCard = files.panCard[0].filename;
+    }
+    if (files?.aadhaarCard?.[0]) {
+      dto.aadhaarCard = files.aadhaarCard[0].filename;
+    }
   }
 
   /**
-   * Prepares nominee data for Prisma create.
-   */
+ * Prepares nominee data for Prisma create.
+ */
   private prepareNomineeData(dto: CreateAccountDto) {
     if (!Array.isArray(dto.nominees) || dto.nominees.length === 0)
       return undefined;
@@ -351,11 +420,11 @@ export class AccountService {
         phoneNumber: nominee.phoneNumber || undefined,
         address: nominee.address
           ? {
-              create: {
-                ...nominee.address,
-                type: nominee.address.type,
-              },
-            }
+            create: {
+              ...nominee.address,
+              type: nominee.address.type,
+            },
+          }
           : undefined,
       })),
     };
@@ -374,4 +443,5 @@ export class AccountService {
       })),
     };
   }
+
 }

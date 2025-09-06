@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import GroupForm from "@/components/account/AccountGroup/AccountGroupForm";
+import AccountGroupForm from "@/components/account/AccountGroup/AccountGroupForm";
 import { createAccountGroup } from "@/lib/api/accountGroups";
 export default function CreateAccountGroupPage() {
   const router = useRouter();
@@ -49,7 +49,7 @@ export default function CreateAccountGroupPage() {
           </div>
         )}
 
-        <GroupForm
+        <AccountGroupForm
           onSubmit={handleCreate}
           loading={loading}
           submitLabel="Create Group"

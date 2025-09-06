@@ -1,9 +1,12 @@
+"use client";
 import { Nominee } from "@/types/AccountForm";
-import inputErrorClass from "@/utils/inputErrorClass";
-import { ChangeEventHandler } from "react";
 import { FaUserFriends } from "react-icons/fa";
 import { AddressForm } from "./AddressSection";
-import cx from "@/utils/cx";
+import cx from "@/utils/cx.util";
+import TextField from "@/components/common/fields/TextField";
+import SelectField from "@/components/common/fields/SelectField";
+
+import { ChangeEventHandler } from "react";
 
 export function NomineeSection({
   nominees,
@@ -20,14 +23,14 @@ export function NomineeSection({
   onChange: ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
   nomineeRelations: string[];
   addNominee: () => void;
-  removeNominee: (index: number) => void;
-  toggleSameAsUserAddress: (index: number) => void;
+  removeNominee: (idx: number) => void;
+  toggleSameAsUserAddress: (idx: number) => void;
   disabled?: boolean;
 }) {
   return (
     <section>
       <h2 className="text-2xl font-semibold mb-4 flex items-center space-x-2">
-        <span className="inline-block w-6 h-6 ">
+        <span className="inline-block w-6 h-6">
           <FaUserFriends />
         </span>
         <span>Nominees</span>
@@ -42,9 +45,11 @@ export function NomineeSection({
           </button>
         )}
       </h2>
+
       {nominees.length === 0 && (
         <p className="italic text-gray-500">No nominees added</p>
       )}
+
       <div className="space-y-6">
         {nominees.map((nominee, idx) => (
           <NomineeForm
@@ -83,7 +88,6 @@ function NomineeForm({
   toggleSameAsUserAddress: () => void;
   disabled?: boolean;
 }) {
-  const baseClass = "border rounded p-2 w-full";
   const name = (field: string) => `nominees.${index}.${field}`;
 
   return (
@@ -93,7 +97,8 @@ function NomineeForm({
       }`}
       aria-disabled={disabled}
     >
-      {index >= 0 && !disabled && (
+      {/* Remove nominee */}
+      {!disabled && (
         <button
           type="button"
           onClick={remove}
@@ -110,144 +115,65 @@ function NomineeForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* First Name */}
-        <div>
-          <label htmlFor={name("firstName")} className="block mb-1 font-medium">
-            First Name <span className="text-red-600">*</span>
-          </label>
-          <input
-            id={name("firstName")}
-            name={name("firstName")}
-            type="text"
-            value={nominee.firstName || ""}
-            onChange={onChange}
-            required
-            disabled={disabled}
-            className={
-              inputErrorClass(name("firstName"), errors, baseClass) +
-              (disabled ? " opacity-50 cursor-not-allowed bg-gray-100" : "")
-            }
-          />
-          {errors[name("firstName")] && (
-            <p className="text-red-600 mt-1 text-sm">
-              {errors[name("firstName")]}
-            </p>
-          )}
-        </div>
+        <TextField
+          label="First Name"
+          id={name("firstName")}
+          value={nominee.firstName || ""}
+          onChange={onChange}
+          required
+          disabled={disabled}
+          error={errors[name("firstName")]}
+        />
 
         {/* Last Name */}
-        <div>
-          <label htmlFor={name("lastName")} className="block mb-1 font-medium">
-            Last Name <span className="text-red-600">*</span>
-          </label>
-          <input
-            id={name("lastName")}
-            name={name("lastName")}
-            type="text"
-            value={nominee.lastName || ""}
-            onChange={onChange}
-            required
-            disabled={disabled}
-            className={
-              inputErrorClass(name("lastName"), errors, baseClass) +
-              (disabled ? " opacity-50 cursor-not-allowed bg-gray-100" : "")
-            }
-          />
-          {errors[name("lastName")] && (
-            <p className="text-red-600 mt-1 text-sm">
-              {errors[name("lastName")]}
-            </p>
-          )}
-        </div>
+        <TextField
+          label="Last Name"
+          id={name("lastName")}
+          value={nominee.lastName || ""}
+          onChange={onChange}
+          required
+          disabled={disabled}
+          error={errors[name("lastName")]}
+        />
 
         {/* Relation */}
         <div className="sm:col-span-2">
-          <label htmlFor={name("relation")} className="block mb-1 font-medium">
-            Relation <span className="text-red-600">*</span>
-          </label>
-          <select
+          <SelectField
+            label="Relation"
             id={name("relation")}
-            name={name("relation")}
             value={nominee.relation || ""}
             onChange={onChange}
             required
             disabled={disabled}
-            className={
-              inputErrorClass(name("relation"), errors, baseClass) +
-              (disabled ? " opacity-50 cursor-not-allowed bg-gray-100" : "")
-            }
-          >
-            <option value="">Select Relation</option>
-            {nomineeRelations.map((rel) => (
-              <option key={rel} value={rel}>
-                {rel}
-              </option>
-            ))}
-          </select>
-          {errors[name("relation")] && (
-            <p className="text-red-600 mt-1 text-sm">
-              {errors[name("relation")]}
-            </p>
-          )}
+            error={errors[name("relation")]}
+            options={nomineeRelations.map((rel) => ({
+              value: rel,
+              label: rel,
+            }))}
+          />
         </div>
 
         {/* Email */}
-        <div>
-          <label htmlFor={name("email")} className="block mb-1 font-medium">
-            Email
-          </label>
-          <input
-            id={name("email")}
-            name={name("email")}
-            type="email"
-            value={nominee.email || ""}
-            onChange={onChange}
-            disabled={disabled}
-            className={
-              inputErrorClass(name("email"), errors, baseClass) +
-              (disabled ? " opacity-50 cursor-not-allowed bg-gray-100" : "")
-            }
-          />
-          {errors[name("email")] && (
-            <p className="text-red-600 mt-1 text-sm">{errors[name("email")]}</p>
-          )}
-        </div>
+        <TextField
+          label="Email"
+          type="email"
+          id={name("email")}
+          value={nominee.email || ""}
+          onChange={onChange}
+          disabled={disabled}
+          error={errors[name("email")]}
+        />
 
         {/* Phone */}
-        <div>
-          <label
-            htmlFor={name("phoneNumber")}
-            className="block mb-1 font-medium"
-          >
-            Phone Number
-          </label>
-          <input
-            id={name("phoneNumber")}
-            name={name("phoneNumber")}
-            type="tel"
-            value={nominee.phoneNumber || ""}
-            onChange={onChange}
-            // removed required to match backend
-            disabled={disabled}
-            aria-invalid={!!errors[name("phoneNumber")]}
-            aria-describedby={
-              errors[name("phoneNumber")]
-                ? `${name("phoneNumber")}-error`
-                : undefined
-            }
-            className={
-              inputErrorClass(name("phoneNumber"), errors, baseClass) +
-              (disabled ? " opacity-50 cursor-not-allowed bg-gray-100" : "")
-            }
-          />
-          {errors[name("phoneNumber")] && (
-            <p
-              id={`${name("phoneNumber")}-error`}
-              className="text-red-600 mt-1 text-sm"
-            >
-              {errors[name("phoneNumber")]}
-            </p>
-          )}
-        </div>
+        <TextField
+          label="Phone Number"
+          type="tel"
+          id={name("phoneNumber")}
+          value={nominee.phoneNumber || ""}
+          onChange={onChange}
+          disabled={disabled}
+          error={errors[name("phoneNumber")]}
+        />
 
         {/* Same as User Address */}
         <div className="sm:col-span-2 flex items-center space-x-2">
@@ -255,10 +181,11 @@ function NomineeForm({
             type="checkbox"
             id={name("sameAsUserAddress")}
             name={name("sameAsUserAddress")}
-            checked={nominee.sameAsUserAddress}
-            onChange={disabled ? undefined : () => toggleSameAsUserAddress()}
+            checked={!!nominee.sameAsUserAddress}
+            onChange={
+              disabled ? undefined : () => toggleSameAsUserAddress(index)
+            }
             disabled={disabled}
-            className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-1 focus:ring-blue-500"
           />
           <label
             htmlFor={name("sameAsUserAddress")}
@@ -268,7 +195,7 @@ function NomineeForm({
                 : "cursor-pointer select-none"
             }
           >
-            Same as user&#39;s current address
+            Same as user's current address
           </label>
         </div>
 
@@ -276,7 +203,7 @@ function NomineeForm({
         <div
           className={cx(
             "sm:col-span-2 border border-gray-300 rounded p-4 bg-gray-50",
-            nominee.sameAsUserAddress && "opacity-50 pointer-events-none",
+            nominee.sameAsUserAddress && "opacity-50 pointer-events-none"
           )}
         >
           <h3 className="font-semibold text-lg mb-3">Nominee Address</h3>

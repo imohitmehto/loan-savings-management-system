@@ -45,6 +45,8 @@ export default function AccountDetailsPage() {
   if (err || !account)
     return <EmptyState message={err ?? "No account found."} />;
 
+  console.log("Account Data:", account);
+
   // Save handler
   const handleUpdate = async (formData: FormData) => {
     setLoading(true);
@@ -59,6 +61,26 @@ export default function AccountDetailsPage() {
     } catch (err) {
       console.error("Update failed", err);
       setError("Failed to update account.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Close account handler
+  const handleCloseAccount = async () => {
+    if (!confirm("Are you sure you want to close this account?")) return;
+    try {
+      setLoading(true);
+      await updateAccountById(accountId, {
+        status: "CLOSED",
+        closedAt: new Date().toISOString(),
+      });
+      const refreshed = await fetchAccountById(accountId);
+      setAccount(refreshed);
+      setSuccess("Account closed successfully!");
+    } catch (err) {
+      console.error("Close failed", err);
+      setError("Failed to close account.");
     } finally {
       setLoading(false);
     }
@@ -104,12 +126,66 @@ export default function AccountDetailsPage() {
 
         {/* Account Form */}
         <AccountForm
+          byId={true}
           initialValues={account}
           onSubmit={handleUpdate}
           submitLabel="Save Changes"
           loading={loading}
           readOnly={!isEditing}
         />
+
+        {/* ===== User Detail Section ===== */}
+        <div className="mt-8 p-4 border rounded bg-gray-50">
+          <h2 className="text-lg font-semibold mb-4">User Details</h2>
+
+          <div className="grid grid-cols-2 gap-4">
+            <p>
+              <strong>Account Number:</strong> {account.accountNumber}
+            </p>
+            {/* <p>
+              <strong>Balance:</strong> ₹ {account.balance?.toFixed(2) ?? "0.00"}
+            </p> */}
+            <p>
+              <strong>Status:</strong> {account.status}
+            </p>
+            <p>
+              <strong>Opened At:</strong>{" "}
+              {new Date(account.openedAt).toLocaleString()}
+            </p>
+            {account.closedAt && (
+              <p>
+                <strong>Closed At:</strong>{" "}
+                {new Date(account.closedAt).toLocaleString()}
+              </p>
+            )}
+            <p>
+              <strong>Role:</strong> {account.user.role}
+            </p>
+
+            {/* User details */}
+            <p>
+              <strong>Username:</strong> {account.user?.userName}
+            </p>
+            <p>
+              <strong>Password (raw):</strong> {account.user?.password}
+            </p>
+            <p>
+              <strong>Verified:</strong>{" "}
+              {account.user?.isVerified ? "Yes" : "No"}
+            </p>
+          </div>
+
+          {/* Close Account Button */}
+          {account.status !== "CLOSED" && (
+            <div className="mt-6 text-right">
+              <PrimaryButton
+                label="Close Account"
+                onClick={handleCloseAccount}
+                className="bg-red-600 hover:bg-red-700"
+              />
+            </div>
+          )}
+        </div>
       </CardContainer>
     </PageLayout>
   );

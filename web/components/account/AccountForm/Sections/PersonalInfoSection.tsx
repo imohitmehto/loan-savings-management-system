@@ -1,5 +1,6 @@
 "use client";
-import { PersonalInfoSectionProps } from "@/types/AccountForm";
+import React, { ChangeEventHandler } from "react";
+import { AccountFormValues } from "@/types/AccountForm";
 import { FaUserCheck } from "react-icons/fa6";
 import TextField from "../../../common/fields/TextField";
 import SelectField from "../../../common/fields/SelectField";
@@ -14,18 +15,20 @@ export default function PersonalInfoSection({
   groupOptions,
   parentAccountOptions = [],
   disabled = false,
-}: PersonalInfoSectionProps & {
+}: {
   parentAccountOptions?: { value: string; label: string }[];
   disabled?: boolean;
+  form: Partial<AccountFormValues>;
+  errors: Record<string, string>;
+  onChange: ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
+  groupOptions: { value: string; label: string }[];
 }) {
   const isChildAccount = !!form.isChildAccount;
 
   return (
     <section>
       <h2 className="text-2xl font-semibold mb-4 flex items-center space-x-2">
-        <span className="inline-block w-6 h-6">
-          <FaUserCheck />
-        </span>
+        <FaUserCheck className="w-6 h-6" />
         <span>Personal Information</span>
       </h2>
 
@@ -34,10 +37,11 @@ export default function PersonalInfoSection({
         <TextField
           label="First Name"
           id="firstName"
+          name="firstName"
           value={form.firstName}
           onChange={onChange}
           required
-          error={errors["firstName"]}
+          error={errors.firstName}
           autoComplete="given-name"
           disabled={disabled}
         />
@@ -46,42 +50,46 @@ export default function PersonalInfoSection({
         <TextField
           label="Last Name"
           id="lastName"
+          name="lastName"
           value={form.lastName}
           onChange={onChange}
           required
-          error={errors["lastName"]}
+          error={errors.lastName}
           autoComplete="family-name"
           disabled={disabled}
         />
 
-        {/* Father / Spouse*/}
+        {/* Father/Spouse */}
         <TextField
           label="Father/Spouse"
           id="fatherSpouse"
+          name="fatherSpouse"
           value={form.fatherSpouse}
           onChange={onChange}
           required
-          error={errors["fatherSpouse"]}
+          error={errors.fatherSpouse}
           disabled={disabled}
         />
 
-        {/* Occupation - enum */}
+        {/* Occupation */}
         <SelectField
           label="Occupation"
           id="occupation"
+          name="occupation"
           value={form.occupation}
           onChange={onChange}
-          disabled={disabled}
           options={OccupationOptions}
           required
-          error={errors["occupation"]}
+          error={errors.occupation}
+          disabled={disabled}
         />
 
-        {/* Company / Institute - optional */}
+        {/* Company/Institute */}
         <TextField
           label="Company/Institute"
           id="companyInstitute"
-          value={form.companyInstitute}
+          name="companyInstitute"
+          value={form.companyInstitute || ""}
           onChange={onChange}
           disabled={disabled}
         />
@@ -90,6 +98,7 @@ export default function PersonalInfoSection({
         <TextField
           label="Email"
           id="email"
+          name="email"
           type="email"
           value={form.email}
           onChange={onChange}
@@ -101,10 +110,12 @@ export default function PersonalInfoSection({
           disabled={disabled}
         />
 
-        {/* Phone - required in backend */}
+        {/* Phone */}
         <TextField
           label="Phone"
           id="phone"
+          name="phone"
+          type="tel"
           value={form.phone}
           onChange={onChange}
           onKeyDown={(e) => {
@@ -117,7 +128,7 @@ export default function PersonalInfoSection({
             }
           }}
           required
-          error={errors["phone"]}
+          error={errors.phone}
           maxLength={10}
           inputMode="numeric"
           disabled={disabled}
@@ -127,11 +138,12 @@ export default function PersonalInfoSection({
         <SelectField
           label="Gender"
           id="gender"
+          name="gender"
           value={form.gender}
           onChange={onChange}
           options={GenderOptions}
           required
-          error={errors["gender"]}
+          error={errors.gender}
           disabled={disabled}
         />
 
@@ -139,11 +151,12 @@ export default function PersonalInfoSection({
         <TextField
           label="Date of Birth"
           id="dob"
+          name="dob"
+          type="date"
           value={form.dob}
           onChange={onChange}
-          type="date"
           required
-          error={errors["dob"]}
+          error={errors.dob}
           max={new Date().toISOString().split("T")[0]}
           disabled={disabled}
         />
@@ -152,37 +165,41 @@ export default function PersonalInfoSection({
         <SelectField
           label="Account Type"
           id="type"
+          name="type"
           value={form.type}
           onChange={onChange}
           options={AccountTypeOptions}
           required
-          error={errors["type"]}
+          error={errors.type}
           disabled={disabled}
         />
 
-        {/* Group Name (UI only, maps to groupId later) */}
+        {/* Group ID */}
         <SelectField
-          label="Group Name"
-          id="groupName"
-          value={form.groupName}
+          label="Group"
+          id="groupId"
+          name="groupId"
+          value={form.groupId || ""}
           onChange={onChange}
           options={[{ value: "", label: "Select Group" }, ...groupOptions]}
+          error={errors.groupId}
           disabled={disabled}
         />
 
-        {/* Parent Account ID (only if child account) */}
+        {/* Parent Account (only show if child account) */}
         {isChildAccount && (
           <SelectField
-            label="Link Parent Account"
+            label="Parent Account"
             id="parentAccountId"
+            name="parentAccountId"
             value={form.parentAccountId || ""}
             onChange={onChange}
             options={[
-              { value: "", label: "Select Parent Account" },
+              { value: "", label: "Select Parent" },
               ...parentAccountOptions,
             ]}
             required
-            error={errors["parentAccountId"]}
+            error={errors.parentAccountId}
             disabled={disabled}
           />
         )}

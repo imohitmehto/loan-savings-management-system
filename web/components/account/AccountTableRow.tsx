@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Account } from "@/types/Account";
-import StatusIcon from "./StatusIcon";
+import StatusIcon, { statusTextColorMap } from "@/components/common/StatusIcon";
 import Link from "next/link";
 import { EyeIcon } from "@heroicons/react/24/solid";
 import GenericTableRow from "@/components/common/table/GenericTableRow";
@@ -36,19 +36,15 @@ export default function AccountTableRow({
     </div>
   );
 
+  const normalizedStatus = account.status.toUpperCase();
+  const textColorClass =
+    statusTextColorMap[normalizedStatus] || "text-gray-600";
+
   const statusCell = (
     <>
       <StatusIcon status={account.status} />
-      <span
-        className={`font-semibold ${
-          account.status === "ACTIVE"
-            ? "text-green-600"
-            : account.status === "INACTIVE"
-              ? "text-yellow-600"
-              : "text-red-600"
-        }`}
-      >
-        {account.status}
+      <span className={`font-semibold ${textColorClass} capitalize`}>
+        {account.status.toLowerCase()}
       </span>
     </>
   );
@@ -95,8 +91,6 @@ export default function AccountTableRow({
     >
       {account.groupName || "N/A"}
     </span>,
-
-    // Status
     <div key="status" className="flex items-center space-x-2">
       {statusCell}
     </div>,

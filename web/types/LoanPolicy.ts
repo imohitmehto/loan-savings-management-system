@@ -1,27 +1,25 @@
+import {
+  FeeType,
+  InterestType,
+  TermPeriod,
+} from "@/utils/enums/loan-policy-enum";
+
 export interface LoanPolicy {
   id: string;
   name: string;
   description?: string | null;
-  interestRate?: number | null;
-  minCreditScore: number;
-  maxLoanAmount: number;
-  rules: Record<string, any>; // JSON object for flexible policy rules
+  minAmount: number;
+  maxAmount: number;
+  interestType: InterestType;
+  interestRate: number;
+  termPeriod: TermPeriod;
+  maxTerm: number;
+  applicationFeeType: FeeType;
+  applicationFee: number;
+  processingFeeType: FeeType;
+  processingFee: number;
+  latePaymentPenaltiesType: FeeType;
+  latePaymentPenalties: number;
+  rules: string[];
   isActive: boolean;
-  createdAt: string; // ISO string
-  updatedAt: string; // ISO string
-
-  loans?: {
-    id: string;
-    loanNumber: string;
-    principal: number;
-    interestRate: number;
-    durationMonths: number;
-    emiAmount: number;
-    startDate: string;
-    endDate: string;
-    status: string;
-    userId: string;
-    loanTypeId: string;
-    policyId: string;
-  }[];
 }

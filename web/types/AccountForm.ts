@@ -1,7 +1,5 @@
-import { ChangeEventHandler } from "react";
-
 export interface Address {
-  type: "CURRENT" | "PERMANENT" | "NOMINEE" | string;
+  type: "CURRENT" | "PERMANENT" | "NOMINEE";
   addressLine1: string;
   addressLine2?: string;
   landmark?: string;
@@ -12,8 +10,8 @@ export interface Address {
 }
 
 export interface AddressesGroup {
-  current: Address;
-  permanent: Address;
+  current: Address;   
+  permanent: Address; 
   sameAsUserAddress?: boolean;
 }
 
@@ -23,7 +21,7 @@ export interface Nominee {
   relation: string;
   email?: string;
   phoneNumber?: string;
-  address: Address;
+  address: Address; 
   sameAsUserAddress?: boolean;
 }
 
@@ -36,7 +34,7 @@ export interface AccountFormValues {
   email: string;
   phone: string;
   gender: "MALE" | "FEMALE" | "OTHER";
-  dob: string;
+  dob: string; 
   type: "SAVING" | "CURRENT" | "LOAN" | "FIXED_DEPOSIT" | string;
   groupId?: string;
   groupName?: string;
@@ -45,45 +43,13 @@ export interface AccountFormValues {
   status?: string;
   accountOpeningFee?: string;
 
-  imageFile?: File | null;
+  image?: File | null;
   imagePreviewUrl?: string;
-  panCardFile?: File | null;
+  panCard?: File | null;
   panCardPreview?: string;
-  aadhaarCardFile?: File | null;
+  aadhaarCard?: File | null;
   aadhaarCardPreview?: string;
 
   addresses: AddressesGroup;
   nominees?: Nominee[];
-}
-
-export interface AccountFormProps {
-  initialValues?: Partial<AccountFormValues>;
-  onSubmit: (values: FormData) => Promise<void>;
-  loading?: boolean;
-  submitLabel?: string;
-  readOnly?: boolean;
-}
-
-export interface FileUploadFieldProps {
-  label: string;
-  name: string;
-  file?: File | null;
-  filePreview?: string;
-  accept?: string;
-  onChange: ChangeEventHandler<HTMLInputElement>;
-  isCircular?: boolean;
-  placeholder?: string;
-}
-
-export interface PersonalInfoSectionProps {
-  form: AccountFormValues;
-  errors: Record<string, string>;
-  onChange: React.ChangeEventHandler<
-    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-  >;
-  groupOptions: { value: string; label: string }[];
-  parentAccountOptions?: { value: string; label: string }[];
-  disabled?: boolean;
-  onSearchGroups?: (search: string, page: number) => Promise<any>;
-  onSearchParentAccounts?: (search: string, page: number) => Promise<any>;
 }

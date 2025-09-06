@@ -1,4 +1,4 @@
-import inputErrorClass from "@/utils/inputErrorClass";
+import inputErrorClass from "@/utils/inputErrorClass.util";
 import { ChangeEventHandler } from "react";
 
 export default function SelectField({

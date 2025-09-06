@@ -6,7 +6,6 @@ export enum AccountType {
 }
 
 export const AccountTypeOptions = [
-  { value: "", label: "Select Account Type" },
   ...Object.values(AccountType).map((a) => ({
     value: a,
     label: a

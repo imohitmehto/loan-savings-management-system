@@ -16,8 +16,12 @@ export default function CreateAccountPage() {
   const [loading, setLoading] = useState(false);
 
   async function handleCreate(formData: FormData) {
+    // console.log(JSON.stringify(Object.fromEntries(formData.entries())));
+
     setLoading(true);
     try {
+      console.log(Object.fromEntries(formData.entries()));
+
       const res = await createAccount(formData);
       toast.success(res.message || "Account created successfully!");
       if (res.data?.id) {

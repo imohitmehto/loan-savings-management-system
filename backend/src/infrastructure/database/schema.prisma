@@ -8,29 +8,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------- ENUMS ----------
+
 enum Role {
   ADMIN
-  STAFF
+  MANAGER
+  SUPERVISOR
   CUSTOMER
-}
-
-enum AccountType {
-  SAVING
-  CURRENT
-  LOAN
-  FIXED_DEPOSIT
-}
-
-enum AddressType {
-  CURRENT
-  PERMANENT
-  NOMINEE
-}
-
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
 }
 
 enum TransactionType {
@@ -42,6 +26,9 @@ enum TransactionType {
   INTEREST
   FINE
   OTHER
+  CAPITAL_INFUSION
+  CASH_TO_BANK
+  BANK_TO_CASH
 }
 
 enum TransactionStatus {
@@ -51,83 +38,192 @@ enum TransactionStatus {
   REVERSED
 }
 
+enum InterestType {
+  FLAT
+  REDUCING
+  FIXED
+  VARIABLE
+  HYBRID
+  ONE_TIME
+  MORTGAGE
+}
+
+enum TermPeriod {
+  DAYS
+  MONTHS
+  YEARS
+}
+
+enum FeeType {
+  FLAT
+  PERCENTAGE
+}
+
 enum LoanStatus {
   PENDING
   APPROVED
   REJECTED
   COMPLETED
   DEFAULTED
+  CLOSED
 }
 
 enum RepaymentStatus {
   PENDING
   PAID
   LATE
+  PARTIALLY_PAID
 }
 
 enum ReportType {
   LEDGER
-  YEARLY
+  ANNUAL
+  QUARTERLY
+  MONTHLY
   ACCOUNT_HISTORY
-}
-
-enum OccupationType {
-  BUSINESS
-  JOB
-  SELF_EMPLOYED
-  STUDENT
-  UNEMPLOYED
+  TRANSACTION_HISTORY
+  LOAN_SUMMARY
+  CUSTOM
+  COLLECTION
 }
 
 enum AccountStatus {
   PENDING
   ACTIVE
   CLOSED
+  SUSPENDED
 }
 
+enum PaymentMode {
+  CASH
+  BANK
+  CHEQUE
+  ONLINE
+  FD
+  INVESTMENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+}
+
+// ---------- MODELS ----------
+
 model User {
-  id         String   @id @default(uuid())
+  id         String    @id @default(cuid())
   firstName  String
   lastName   String
-  dob        DateTime
-  email      String
-  phone      String
-  userName   String   @unique
+  email      String    @unique
+  phone      String?
   password   String
-  isVerified Boolean  @default(false)
-  role       Role     @default(CUSTOMER)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  isActive   Boolean   @default(false)
+  isVerified Boolean   @default(false)
+  role       Role      @default(CUSTOMER)
+  lastLogin  DateTime?
 
-  otps      Otp[]
-  accounts  Account[]
-  loans     Loan[]
-  auditLogs AuditLog[]
-  reports   Report[]
-  addresses Address[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
 
-  transactionsCreated   Transaction[] @relation("TransactionCreatedBy")
-  transactionsApproved  Transaction[] @relation("TransactionApprovedBy")
-  transactionsPerformed Transaction[] @relation("TransactionUser")
+  otps            Otp[]
+  accounts        Account[]     @relation("UserAccounts")
+  transactions    Transaction[] @relation("UserTransactions")
+  loans           Loan[]
+  createdAccounts Account[]     @relation("AccountCreatedBy")
+  updatedAccounts Account[]     @relation("AccountUpdatedBy")
+
+  @@index([email])
+  @@index([phone])
 }
 
 model Otp {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   email       String?
   phone       String?
-  code        String
+  otp         String
   expiresAt   DateTime
   userId      String
-  resendCount Int      @default(0)
+  resendCount Int       @default(0)
   lastSentAt  DateTime
-  createdAt   DateTime @default(now())
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, otp])
+  @@index([userId, otp])
+}
+
+model Account {
+  id                String        @id @default(uuid())
+  accountNumber     String        @unique
+  firstName         String
+  lastName          String
+  fatherSpouse      String
+  occupation        String
+  companyInstitute  String?
+  email             String?
+  phone             String?
+  gender            Gender
+  dob               DateTime      @db.Date
+  photo             String?
+  panCard           String?
+  aadhaarCard       String?
+  type              AccountType
+  isMinor           Boolean       @default(false)
+  linkedAccountId   String?
+  accountOpeningFee Decimal
+  balance           Decimal       @default(0)
+  status            AccountStatus @default(PENDING)
+  openedAt          DateTime      @default(now())
+  closedAt          DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  createdById       String?
+  updatedById       String?
+  userId            String
+  groupId           String?
+
+  user      User          @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
+  group     AccountGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy User?         @relation("AccountCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?         @relation("AccountUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  addresses     Address[]
+  nominees      Nominee[]
+  transactions  Transaction[]
+  loans         Loan[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([accountNumber])
+  @@index([userId])
+  @@index([groupId])
+  @@index([status])
+  @@index([email])
+  @@index([phone])
+}
+
+model AccountGroup {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  accounts    Account[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Address {
-  id           String      @id @default(uuid())
-  type         AddressType
+  id           String   @id @default(uuid())
+  type         String
   addressLine1 String
   addressLine2 String?
   landmark     String?
@@ -135,62 +231,12 @@ model Address {
   state        String
   country      String
   pinCode      String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  accountId    String?
+  account      Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   nominees Nominee[]
-
-  accountId String?
-  account   Account? @relation(fields: [accountId], references: [id])
-}
-
-model Account {
-  id                String         @id @default(uuid())
-  accountNumber     String         @unique
-  firstName         String
-  lastName          String
-  fatherSpouse      String
-  occupation        OccupationType
-  companyInstitute  String?
-  email             String
-  phone             String
-  gender            Gender
-  dob               DateTime
-  photo             String?
-  panCard           String?
-  aadhaarCard       String?
-  type              AccountType
-  isChildAccount    Boolean        @default(false)
-  parentAccountId   String?
-  accountOpeningFee Float?
-  balance           Float          @default(0)
-  status            AccountStatus  @default(PENDING)
-  openedAt          DateTime       @default(now())
-  closedAt          DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  groupId String?
-  group   AccountGroup? @relation(fields: [groupId], references: [id])
-
-  transactions Transaction[]
-  profitShares ProfitDistribution[]
-  addresses    Address[]
-  nominees     Nominee[]
-}
-
-model AccountGroup {
-  id          String               @id @default(uuid())
-  name        String
-  description String
-  accounts    Account[]
-  profits     ProfitDistribution[]
 }
 
 model Nominee {
@@ -200,152 +246,145 @@ model Nominee {
   relation    String
   email       String?
   phoneNumber String?
+  accountId   String
+  addressId   String?
 
-  addressId String?
-  address   Address? @relation(fields: [addressId], references: [id])
-
-  accountId String?
-  account   Account? @relation(fields: [accountId], references: [id])
-}
-
-model Transaction {
-  id            String            @id @default(uuid())
-  type          TransactionType
-  amount        Float
-  description   String?
-  status        TransactionStatus @default(PENDING)
-  isReversed    Boolean           @default(false)
-  reversalOfId  String?
-  transactionId String?
-  createdById   String
-  approvedById  String?
-  accountId     String
-  userId        String?
-  createdAt     DateTime          @default(now())
-
-  account     Account @relation(fields: [accountId], references: [id])
-  createdBy   User    @relation("TransactionCreatedBy", fields: [createdById], references: [id])
-  approvedBy  User?   @relation("TransactionApprovedBy", fields: [approvedById], references: [id])
-  performedBy User?   @relation("TransactionUser", fields: [userId], references: [id])
-
-  reversalOf Transaction?  @relation("ReversalOfTransaction", fields: [reversalOfId], references: [id])
-  reversals  Transaction[] @relation("ReversalOfTransaction")
-
-  relatedTo  Transaction?  @relation("TransactionLink", fields: [transactionId], references: [id])
-  linkedFrom Transaction[] @relation("TransactionLink")
-
-  // Removed: User User? @relation(fields: [userId], references: [id])
+  account Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  address Address? @relation(fields: [addressId], references: [id], onDelete: Cascade)
 }
 
 model Loan {
-  id             String     @id @default(uuid())
-  loanNumber     String     @unique
-  principal      Float
-  interestRate   Float
-  durationMonths Int
-  emiAmount      Float
-  startDate      DateTime
-  endDate        DateTime
-  status         LoanStatus
+  id        String  @id @default(uuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  loanType     String
+  amount       Decimal    @db.Decimal(12, 2)
+  interestRate Decimal    @db.Decimal(5, 2)
+  tenureMonths Int
+  emiAmount    Decimal    @db.Decimal(12, 2)
+  status       LoanStatus @default(PENDING)
 
-  loanTypeId String
-  loanType   LoanType @relation(fields: [loanTypeId], references: [id])
+  appliedAt  DateTime  @default(now())
+  approvedAt DateTime?
+  closedAt   DateTime?
 
-  policyId String
-  policy   LoanPolicy @relation(fields: [policyId], references: [id])
+  payments      LoanPayment[]
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  repayments    Repayment[]
+  loanPolicyId  String?
+  loanPolicy    LoanPolicy?   @relation(fields: [loanPolicyId], references: [id])
+  ledgerEntries LedgerEntry[]
+}
 
-  repayments Repayment[]
+model LoanPayment {
+  id     String @id @default(uuid())
+  loanId String
+  loan   Loan   @relation(fields: [loanId], references: [id])
+
+  amount        Decimal     @db.Decimal(12, 2)
+  paymentDate   DateTime    @default(now())
+  mode          PaymentMode
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  status RepaymentStatus @default(PAID)
+
+  @@index([loanId])
+}
+
+model Transaction {
+  id        String  @id @default(uuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  type         TransactionType
+  amount       Decimal         @db.Decimal(12, 2)
+  balanceAfter Decimal         @db.Decimal(12, 2)
+
+  description String?
+  createdAt   DateTime @default(now())
+
+  userId String?
+  user   User?   @relation("UserTransactions", fields: [userId], references: [id])
+
+  loanPayment LoanPayment[]
+
+  @@index([accountId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Repayment {
   id       String          @id @default(uuid())
   dueDate  DateTime
   paidDate DateTime?
-  amount   Float
+  amount   Decimal
   status   RepaymentStatus
+  loanId   String
+  loan     Loan            @relation(fields: [loanId], references: [id])
 
-  loanId String
-  loan   Loan   @relation(fields: [loanId], references: [id])
-}
-
-model LoanType {
-  id           String  @id @default(uuid())
-  name         String
-  description  String?
-  interestRate Float
-  maxAmount    Float
-  minAmount    Float
-
-  loans Loan[]
+  @@index([loanId])
+  @@index([dueDate])
 }
 
 model LoanPolicy {
-  id             String   @id @default(uuid())
-  name           String
-  description    String?
-  interestRate   Float?
-  minCreditScore Int
-  maxLoanAmount  Float
-  rules          Json
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                       String       @id @default(uuid())
+  name                     String
+  description              String?
+  minAmount                Decimal
+  maxAmount                Decimal
+  interestType             InterestType
+  interestRate             Float
+  termPeriod               TermPeriod
+  maxTerm                  Int
+  applicationFeeType       FeeType
+  applicationFee           Decimal
+  processingFeeType        FeeType
+  processingFee            Decimal
+  latePaymentPenaltiesType FeeType
+  latePaymentPenalties     Decimal
+  rules                    String[]
+  isActive                 Boolean      @default(true)
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
 
   loans Loan[]
 }
 
-model LoanCalculatorInput {
-  id            String   @id @default(uuid())
-  principal     Float
-  interestRate  Float
-  duration      Int
-  calculatedEmi Float
-  createdAt     DateTime @default(now())
+enum TransactionCategory {
+  ACCOUNT_DEPOSIT
+  ACCOUNT_WITHDRAWAL
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT
+  INTEREST_INCOME
+  FEE
+  FUND_ALLOCATION
+  PROFIT_DISTRIBUTION
+  ADJUSTMENT
 }
 
-model AuditLog {
-  id        String   @id @default(uuid())
-  action    String
-  metadata  Json
-  createdAt DateTime @default(now())
+model LedgerEntry {
+  id            String              @id @default(uuid())
+  category      TransactionCategory
+  description   String?
+  amount        Decimal             @db.Decimal(12, 2)
+  debitAccount  String?
+  creditAccount String?
+  balanceAfter  Decimal?            @db.Decimal(12, 2)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-}
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
-model Report {
-  id        String     @id @default(uuid())
-  type      ReportType
-  data      Json
-  createdAt DateTime   @default(now())
+  loanId String?
+  loan   Loan?   @relation(fields: [loanId], references: [id], onDelete: SetNull)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-}
+  createdAt   DateTime @default(now())
+  createdById String?
 
-model ProfitDistribution {
-  id            String   @id @default(uuid())
-  year          Int
-  totalProfit   Float
-  perAccount    Float
-  distributedAt DateTime
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id])
-
-  groupId String?
-  group   AccountGroup? @relation(fields: [groupId], references: [id])
-}
-
-model CommunityFund {
-  id            String   @id @default(uuid())
-  communityName String   @unique
-  totalDeposit  Float    @default(0)
-  totalWithdraw Float    @default(0)
-  netBalance    Float    @default(0)
-  updatedAt     DateTime @updatedAt
-  createdAt     DateTime @default(now())
+  @@index([accountId])
+  @@index([loanId])
+  @@index([createdAt])
 }

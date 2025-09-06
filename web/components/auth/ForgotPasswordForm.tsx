@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Logo from "@/public/images/logo.jpg";
+import Logo from "@/public/images/logo.png";
 import {
   ForgotPasswordInput,
   forgotPasswordSchema,

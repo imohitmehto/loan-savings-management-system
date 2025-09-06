@@ -44,7 +44,7 @@ export async function safeApiCall<T>(callback: () => Promise<T>): Promise<T> {
 }
 
 /** Optional API debug logging */
-const DEBUG = true;
+const DEBUG = false;
 export function apiLog(...args: unknown[]) {
   if (DEBUG) console.log("[API]", ...args);
 }

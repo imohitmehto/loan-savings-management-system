@@ -7,7 +7,7 @@ import {
   CardContainer,
   PageHeader,
 } from "@/components/common/layout";
-import LoanPolicyForm from "@/components/loan/loanPolicyForm/LoanPolicyForm";
+import LoanPolicyForm from "@/components/loan/loan-PolicyForm/LoanPolicyForm";
 import { createLoanPolicy } from "@/lib/api/loanPolicies";
 import toast from "react-hot-toast";
 
@@ -20,9 +20,8 @@ export default function CreateLoanPolicyPage() {
     try {
       const res = await createLoanPolicy(formData);
       toast.success(res.message || "Loan Policy created successfully!");
-
-      if (res.data?.id) {
-        router.push(`/loan-policy/${res.data.id}`);
+      if (res?.id) {
+        router.push(`/loans/policies/${res.id}`);
       } else {
         console.error("No loan policy ID returned from API:", res);
       }

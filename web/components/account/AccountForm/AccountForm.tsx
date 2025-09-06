@@ -2,10 +2,10 @@
 import React, {
   useState,
   useEffect,
+  useCallback,
   ChangeEvent,
   FormEvent,
   useMemo,
-  useCallback,
 } from "react";
 import { AccountFormProps } from "@/types/AccountForm";
 import { AccountFormSchema } from "@/validators/AccountFormSchema";
@@ -15,18 +15,14 @@ import {
   emptyAddress,
   emptyNominee,
   emptyForm,
-} from "@/utils/constants/account";
-import FileUploadField from "../../common/fields/FileUploadField";
-import calculateAge from "@/utils/calculateAge";
-import { AddressSection } from "./Sections/AddressSection";
+} from "@/utils/empty_form/account";
+import calculateAge from "@/utils/calculateAge.util";
+import ImageUploadField from "@/components/common/fields/ImageUploadField";
 import PersonalInfoSection from "./Sections/PersonalInfoSection";
+import { AddressSection } from "./Sections/AddressSection";
 import { NomineeSection } from "./Sections/NomineeSection";
 import { NomineeRelationOptions } from "@/utils/enums/nominee-relation.enum";
 
-// --- Recommended: Define a Group type for clarity ---
-type Group = { id: string; name?: string };
-
-// --- Recommended: Options for selects
 type SelectOption = { value: string; label: string };
 
 export default function AccountForm({
@@ -36,140 +32,48 @@ export default function AccountForm({
   submitLabel = "Create Account",
   readOnly = false,
 }: AccountFormProps) {
-  /** ---------------- State ---------------- */
-  const [form, setForm] = useState<typeof emptyForm>(() => ({
-    ...emptyForm,
-    ...initialValues,
-    nominees: initialValues.nominees || [],
-    addresses: {
-      ...emptyForm.addresses,
-      ...initialValues.addresses,
-    },
-    isChildAccount: initialValues.isChildAccount || false,
-    parentAccountId: initialValues.parentAccountId || "",
-  }));
-
+  // — State —
+  const [form, setForm] = useState({ ...emptyForm, ...initialValues });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [groupOptions, setGroupOptions] = useState<SelectOption[]>([]);
-  const [parentAccountOptions, setParentAccountOptions] = useState<
-    SelectOption[]
-  >([]);
+  const [parentOptions, setParentOptions] = useState<SelectOption[]>([]);
 
-  /** ---------------- Derived Values ---------------- */
+  // — Derived —
   const age = useMemo(() => calculateAge(form.dob), [form.dob]);
   const isChildAccount = age !== null && age < 18;
 
-  /** ---------------- Effects ---------------- */
+  // — Fetch Groups & Parents —
   useEffect(() => {
     fetchAllAccountGroup()
-      .then((groupsData: Group[] | { items: Group[] }) => {
-        // Accepts both: array or paged object with items
-        let groupsArray: Group[] = [];
-        if (Array.isArray(groupsData)) {
-          groupsArray = groupsData;
-        } else if ("items" in groupsData && Array.isArray(groupsData.items)) {
-          groupsArray = groupsData.items;
-        }
-        const options = groupsArray.map((g) => ({
-          value: g.id,
-          label: g.name || "Unnamed Group",
-        }));
-        setGroupOptions(options);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch groups", error);
-        setGroupOptions([]);
-      });
-  }, []);
-
-  useEffect(() => {
-    fetchAllAccounts()
-      .then((accountsData) => {
-        setParentAccountOptions(
-          Array.isArray(accountsData)
-            ? accountsData
-                .filter((acc) => calculateAge(acc?.dob) ?? 0 >= 18)
-                .map((acc) => ({
-                  value: acc.id,
-                  label: `${acc.firstName} ${acc.lastName} (${acc.accountNumber})`,
-                }))
-            : [],
+      .then((data) => {
+        const groups = Array.isArray(data) ? data : data.items;
+        setGroupOptions(
+          groups.map((g) => ({ value: g.id, label: g.name || "Unnamed" }))
         );
       })
-      .catch((error) => {
-        console.error("Failed to fetch parent accounts", error);
-        setParentAccountOptions([]);
-      });
+      .catch(() => setGroupOptions([]));
+
+    fetchAllAccounts()
+      .then((data) => {
+        const adults = (Array.isArray(data) ? data : [])
+          .filter((a) => (calculateAge(a.dob) ?? 0) >= 18)
+          .map((a) => ({
+            value: a.id,
+            label: `${a.firstName} ${a.lastName} (${a.accountNumber})`,
+          }));
+        setParentOptions(adults);
+      })
+      .catch(() => setParentOptions([]));
   }, []);
 
-  useEffect(() => {
-    if (initialValues.imagePreviewUrl) {
-      setForm((f) => ({
-        ...f,
-        imagePreviewUrl: initialValues.imagePreviewUrl,
-      }));
-    }
-  }, [initialValues.imagePreviewUrl]);
-
-  useEffect(() => {
-    if (form.isChildAccount !== isChildAccount) {
-      setForm((prev) => ({
-        ...prev,
-        isChildAccount,
-        parentAccountId: isChildAccount ? prev.parentAccountId : "",
-      }));
-    }
-  }, [isChildAccount, form.isChildAccount]);
-
-  /** ---------------- Lazy Search Handlers ---------------- */
-  const onSearchGroups = useCallback(
-    async (search: string, page: number) => {
-      const pageSize = 10;
-      const filtered = groupOptions.filter((g) =>
-        g.label.toLowerCase().includes(search.toLowerCase()),
-      );
-      const start = (page - 1) * pageSize;
-      return {
-        options: filtered.slice(start, start + pageSize),
-        hasMore: filtered.length > start + pageSize,
-      };
-    },
-    [groupOptions],
-  );
-
-  const onSearchParentAccounts = useCallback(
-    async (search: string, page: number) => {
-      const all = await fetchAllAccounts();
-      const filtered = Array.isArray(all)
-        ? all
-            .filter((acc) => (calculateAge(acc.dob) ?? 0) >= 18)
-            .filter((acc) =>
-              `${acc.firstName} ${acc.lastName} ${acc.accountNumber}`
-                .toLowerCase()
-                .includes(search.toLowerCase()),
-            )
-        : [];
-      const pageSize = 10;
-      const start = (page - 1) * pageSize;
-      return {
-        options: filtered.slice(start, start + pageSize).map((acc) => ({
-          value: acc.id,
-          label: `${acc.firstName} ${acc.lastName} (${acc.accountNumber})`,
-        })),
-        hasMore: filtered.length > start + pageSize,
-      };
-    },
-    [],
-  );
-
-  /** ---------------- Handlers ---------------- */
-  const setNestedField = useCallback((path: string, value: unknown) => {
-    setForm((f) => {
-      const updated = structuredClone(f);
+  // — Helper to set nested fields via dotted paths —
+  const setNestedField = useCallback((path: string, value: any) => {
+    setForm((prev) => {
+      const updated = structuredClone(prev);
       const keys = path.split(".");
-      let obj: unknown = updated;
+      let obj: any = updated;
       keys.slice(0, -1).forEach((k) => {
-        if (typeof obj[k] !== "object" || obj[k] === null) obj[k] = {};
+        if (obj[k] == null || typeof obj[k] !== "object") obj[k] = {};
         obj = obj[k];
       });
       obj[keys[keys.length - 1]] = value;
@@ -177,310 +81,222 @@ export default function AccountForm({
     });
   }, []);
 
-  const handleChange = useCallback(
+  // — Field Change Handler —
+  const handleFieldChange = useCallback(
     (e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>) => {
-      const { name, value, type } = e.target;
-
+      const { name, type, files, value } = e.target as any;
       if (type === "file") {
-        const target = e.target as HTMLInputElement;
-        const file = target.files?.[0];
-        if (file) {
-          const fileUrl = URL.createObjectURL(file);
-          setForm((prev) => {
-            const updated = { ...prev };
-            if (name === "imageFile") {
-              updated.imageFile = file;
-              updated.imagePreviewUrl = fileUrl;
-            } else if (name === "panCardFile") {
-              updated.panCardFile = file;
-              updated.panCardPreview = fileUrl;
-            } else if (name === "aadhaarCardFile") {
-              updated.aadhaarCardFile = file;
-              updated.aadhaarCardPreview = fileUrl;
-            }
-            return updated;
-          });
-        }
-        return;
-      }
-
-      if (name.includes(".")) {
+        const file = files?.[0] ?? null;
+        setNestedField(name, file);
+        setNestedField(
+          `${name}PreviewUrl`,
+          file ? URL.createObjectURL(file) : ""
+        );
+      } else if (name.includes(".")) {
         setNestedField(name, value);
       } else {
         setForm((prev) => ({ ...prev, [name]: value }));
       }
-
       setErrors((prev) => {
-        if (!(name in prev)) return prev;
-        const { [name]: _, ...rest } = prev;
-        return rest;
+        const copy = { ...prev };
+        delete copy[name];
+        return copy;
       });
     },
-    [setNestedField],
+    [setNestedField]
   );
 
-  const addNominee = useCallback(
-    () =>
-      setForm((f) => ({
-        ...f,
-        nominees: [...f.nominees, { ...emptyNominee }],
-      })),
-    [],
-  );
+  // — Toggle “Same as Current” for Permanent Address —
+  const toggleSameAsCurrentAddress = useCallback(() => {
+    setForm((prev) => {
+      const same = !prev.addresses.sameAsUserAddress;
+      const current = prev.addresses.current;
+      return {
+        ...prev,
+        addresses: {
+          ...prev.addresses,
+          sameAsUserAddress: same,
+          permanent: same
+            ? { ...current, type: "PERMANENT" }
+            : { ...emptyAddress, type: "PERMANENT" },
+        },
+      };
+    });
+  }, []);
 
-  const removeNominee = useCallback(
-    (index: number) =>
-      setForm((f) => {
-        const nominees = f.nominees.filter((_, i) => i !== index);
-        return { ...f, nominees };
-      }),
-    [],
-  );
+  const toggleNomineeAddress = useCallback((index: number) => {
+    setForm((prev) => {
+      const nominees = [...prev.nominees];
+      const n = { ...nominees[index] };
+      n.sameAsUserAddress = !n.sameAsUserAddress;
+      n.address = n.sameAsUserAddress
+        ? { ...prev.addresses.current, type: "NOMINEE" }
+        : { ...emptyAddress, type: "NOMINEE" };
+      nominees[index] = n;
+      return { ...prev, nominees };
+    });
+  }, []);
 
-  const toggleSameAsUserAddress = useCallback(
-    (index: number) =>
-      setForm((f) => {
-        const nominees = [...f.nominees];
-        const nominee = { ...nominees[index] };
-        nominee.sameAsUserAddress = !nominee.sameAsUserAddress;
-        nominee.address = nominee.sameAsUserAddress
-          ? { ...f.addresses.current, type: "NOMINEE" }
-          : { ...emptyAddress, type: "NOMINEE" };
-        nominees[index] = nominee;
-        return { ...f, nominees };
-      }),
-    [],
-  );
+  // — Scroll to First Error —
+  const scrollToError = useCallback((fieldErrors: Record<string, string>) => {
+    const first = Object.keys(fieldErrors)[0];
+    if (!first) return;
+    const el = document.querySelector(`[name="${first}"], #${first}`);
+    (el as HTMLElement)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, []);
 
-  const toggleSameAsCurrentAddress = useCallback(
-    () =>
-      setForm((f) => {
-        const same = !f.addresses.sameAsUserAddress;
-        return {
-          ...f,
-          addresses: {
-            ...f.addresses,
-            sameAsUserAddress: same,
-            permanent: same
-              ? { ...f.addresses.current, type: "PERMANENT" }
-              : { ...emptyAddress, type: "PERMANENT" },
-          },
-        };
-      }),
-    [],
-  );
-
+  // — Submit —
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();
 
-      // --- Transform state to backend shape ---
-      const transformedForm = {
+      // Prepare payload according to backend CreateAccountDto expectations
+      const payload = {
         ...form,
+        // Convert addresses from grouped to array with type discriminator
         addresses: [
           { ...form.addresses.current, type: "CURRENT" },
           { ...form.addresses.permanent, type: "PERMANENT" },
         ],
+        // Add 'type' to nominee addresses and clean undefined optional fields
         nominees:
-          form.nominees?.length > 0
-            ? form.nominees.map((n) => {
-                const _n = { ...n };
-                if (!_n.email) delete _n.email;
-                if (!_n.phoneNumber) delete _n.phoneNumber;
-                return _n;
-              })
-            : undefined,
+          form.nominees?.map((n) => ({
+            ...n,
+            email: n.email || undefined,
+            phoneNumber: n.phoneNumber || undefined,
+            address: { ...n.address, type: "NOMINEE" },
+          })) ?? [],
       };
 
-      // --- Validate with zod ---
-      const result = AccountFormSchema.safeParse(transformedForm);
-      if (!result.success) {
+      const validation = AccountFormSchema.safeParse(payload);
+      if (!validation.success) {
         const fieldErrors: Record<string, string> = {};
-        result.error.errors.forEach((err) => {
+        validation.error.errors.forEach((err) => {
           fieldErrors[err.path.join(".")] = err.message;
         });
         setErrors(fieldErrors);
+        scrollToError(fieldErrors);
         return;
       }
 
-      // --- Build FormData from *validated* object ---
+      // Convert to FormData for file uploads compatibility
       const formData = new FormData();
-
-      // Required Strings
-      formData.append("firstName", transformedForm.firstName.trim());
-      formData.append("lastName", transformedForm.lastName.trim());
-      formData.append("fatherSpouse", transformedForm.fatherSpouse.trim());
-
-      // Enums (force uppercase to match backend)
-      formData.append("occupation", transformedForm.occupation.toUpperCase());
-      formData.append("gender", transformedForm.gender.toUpperCase());
-      formData.append("type", transformedForm.type.toUpperCase());
-
-      if (transformedForm.status) {
-        formData.append("status", transformedForm.status.toUpperCase());
-      }
-
-      // Other Strings
-      if (transformedForm.email)
-        formData.append("email", transformedForm.email);
-      if (transformedForm.phone)
-        formData.append("phone", transformedForm.phone);
-
-      // Date → safer "YYYY-MM-DD"
-      if (transformedForm.dob) {
-        const dobStr = new Date(transformedForm.dob).toISOString();
-        formData.append("dob", dobStr);
-      }
-
-      // Booleans
-      formData.append(
-        "isChildAccount",
-        transformedForm.isChildAccount ? "true" : "false",
-      );
-      if (transformedForm.parentAccountId) {
-        formData.append("parentAccountId", transformedForm.parentAccountId);
-      }
-
-      // Numbers
-      if (typeof transformedForm.accountOpeningFee === "number") {
-        formData.append("accountOpeningFee", transformedForm.accountOpeningFee);
-      }
-
-      // Addresses
-      transformedForm.addresses.forEach((addr, idx) => {
-        Object.entries(addr).forEach(([key, value]) => {
-          if (value !== undefined && value !== null)
-            formData.append(`addresses[${idx}].${key}`, String(value));
-        });
+      Object.entries(payload).forEach(([key, val]) => {
+        if (val == null) return;
+        if (key === "addresses" || key === "nominees") {
+          formData.append(key, JSON.stringify(val));
+        } else if (val instanceof File) {
+          formData.append(key, val);
+        } else {
+          formData.append(key, String(val));
+        }
       });
 
-      // Nominees
-      if (transformedForm.nominees) {
-        transformedForm.nominees.forEach((nominee, idx) => {
-          Object.entries(nominee).forEach(([key, value]) => {
-            if (
-              typeof value === "object" &&
-              value !== null &&
-              !Array.isArray(value)
-            ) {
-              // Nested address inside nominee
-              Object.entries(value).forEach(([addrKey, addrVal]) => {
-                if (addrVal !== undefined && addrVal !== null)
-                  formData.append(
-                    `nominees[${idx}].${key}.${addrKey}`,
-                    addrVal,
-                  );
-              });
-            } else if (value !== undefined && value !== null) {
-              formData.append(`nominees[${idx}].${key}`, String(value));
-            }
-          });
-        });
-      }
-
-      // Group ID
-      if (transformedForm.groupId) {
-        formData.append("groupId", transformedForm.groupId);
-      }
-
-      if (transformedForm.imageFile)
-        formData.append("photo", transformedForm.imageFile);
-      if (transformedForm.panCardFile)
-        formData.append("panCard", transformedForm.panCardFile);
-      if (transformedForm.aadhaarCardFile)
-        formData.append("aadhaarCard", transformedForm.aadhaarCardFile);
-
-      try {
-        await onSubmit(formData);
-      } catch (err) {
-        console.error("Form submission failed", err);
-      }
+      await onSubmit(formData).catch(console.error);
     },
-    [form, onSubmit],
+    [form, onSubmit, scrollToError]
   );
 
-  /** ---------------- Render ---------------- */
   return (
     <form
-      className="max-w-4xl mx-auto p-8 bg-white rounded-xl shadow space-y-8"
       onSubmit={handleSubmit}
       noValidate
+      className="max-w-4xl mx-auto p-8 bg-white rounded-xl shadow space-y-8"
     >
-      {/* Profile Image Upload */}
-      <FileUploadField
-        label="Profile Image"
-        name="imageFile"
-        file={form.imageFile}
-        filePreview={form.imagePreviewUrl}
-        accept="image/*"
-        onChange={handleChange}
-        isCircular
-        disabled={readOnly}
-      />
+      {/* Profile Image */}
+      <div className="flex justify-center">
+        <ImageUploadField
+          label="Profile Image"
+          name="photo" /* Changed from image to photo for backend matching */
+          placeholder="Upload Profile"
+          file={form.photo}
+          filePreview={form.photoPreviewUrl}
+          onChange={handleFieldChange}
+          isCircular
+          disabled={readOnly}
+          maxSizeInMB={3}
+          acceptedFormats={["image/jpeg", "image/png", "image/webp"]}
+        />
+      </div>
 
       {/* Personal Info */}
       <PersonalInfoSection
         form={form}
         errors={errors}
-        onChange={handleChange}
+        onChange={handleFieldChange}
         groupOptions={groupOptions}
-        parentAccountOptions={parentAccountOptions}
-        disabled={readOnly}
-        onSearchGroups={onSearchGroups}
-        onSearchParentAccounts={onSearchParentAccounts}
+        parentOptions={parentOptions}
+        isChildAccount={isChildAccount}
+        readOnly={readOnly}
       />
 
       {/* Addresses */}
       <AddressSection
         addresses={form.addresses}
         errors={errors}
-        onChange={handleChange}
+        onChange={handleFieldChange}
         toggleSameAsCurrentAddress={toggleSameAsCurrentAddress}
         disabled={readOnly}
       />
 
       {/* Documents */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FileUploadField
-          label="PAN Card"
-          name="panCardFile"
-          file={form.panCardFile}
-          filePreview={form.panCardPreview}
-          accept="image/*,application/pdf"
-          onChange={handleChange}
-          disabled={readOnly}
-        />
-        <FileUploadField
-          label="Aadhaar Card"
-          name="aadhaarCardFile"
-          file={form.aadhaarCardFile}
-          filePreview={form.aadhaarCardPreview}
-          accept="image/*,application/pdf"
-          onChange={handleChange}
-          disabled={readOnly}
-        />
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold border-b pb-2">
+          Document Uploads
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {["panCard", "aadhaarCard"].map((field) => (
+            <ImageUploadField
+              key={field}
+              label={field === "panCard" ? "PAN Card" : "Aadhaar Card"}
+              name={field}
+              placeholder={`Upload ${field === "panCard" ? "PAN" : "Aadhaar"}`}
+              file={form[field]}
+              filePreview={form[`${field}Preview`]}
+              onChange={handleFieldChange}
+              disabled={readOnly}
+              maxSizeInMB={5}
+              acceptedFormats={[
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+                "image/gif",
+              ]}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Nominees */}
       <NomineeSection
         nominees={form.nominees}
         errors={errors}
-        onChange={handleChange}
-        nomineeRelations={NomineeRelationOptions.map((r) => r.value).filter(
-          Boolean,
-        )}
-        addNominee={addNominee}
-        removeNominee={removeNominee}
-        toggleSameAsUserAddress={toggleSameAsUserAddress}
+        onChange={handleFieldChange}
+        nomineeRelations={NomineeRelationOptions.map((r) => r.value)}
+        addNominee={() =>
+          setForm((f) => ({
+            ...f,
+            nominees: [...(f.nominees ?? []), emptyNominee],
+          }))
+        }
+        removeNominee={(i) =>
+          setForm((f) => ({
+            ...f,
+            nominees: f.nominees?.filter((_, idx) => idx !== i),
+          }))
+        }
+        toggleSameAsUserAddress={toggleNomineeAddress}
         disabled={readOnly}
       />
 
-      {/* Submit Button */}
       {!readOnly && (
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-blue-600 text-white rounded-lg text-lg font-semibold transition hover:bg-blue-700 disabled:opacity-50"
+          className="w-full py-4 bg-blue-600 text-white rounded-lg text-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? "Submitting..." : submitLabel}
         </button>

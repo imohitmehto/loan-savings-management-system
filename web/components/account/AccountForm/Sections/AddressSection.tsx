@@ -1,10 +1,8 @@
 import React, { ChangeEventHandler, memo } from "react";
 import { AccountFormValues, Address } from "@/types/AccountForm";
 import { FaAddressCard } from "react-icons/fa";
-import cx from "@/utils/cx";
-import inputErrorClass from "@/utils/inputErrorClass";
-
-/** ---------- TYPES ---------- */
+import cx from "@/utils/cx.util";
+import inputErrorClass from "@/utils/inputErrorClass.util";
 
 interface AddressSectionProps {
   addresses: AccountFormValues["addresses"];
@@ -23,7 +21,6 @@ interface AddressFormProps {
   disabled?: boolean;
 }
 
-/** ---------- ADDRESS FIELD CONFIGURATION (OUTSIDE FOR MEMOIZATION) ---------- */
 const addressFields: {
   label: string;
   field: keyof Address;
@@ -38,8 +35,6 @@ const addressFields: {
   { label: "Pin Code", field: "pinCode", required: true },
 ];
 
-/** ---------- ADDRESS SECTION COMPONENT ---------- */
-
 export const AddressSection = memo(function AddressSection({
   addresses,
   errors,
@@ -53,6 +48,7 @@ export const AddressSection = memo(function AddressSection({
         <FaAddressCard className="inline-block w-6 h-6" />
         <span>Addresses</span>
       </h2>
+
       <label
         className={`inline-flex items-center mb-4 space-x-2 ${
           disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
@@ -60,7 +56,7 @@ export const AddressSection = memo(function AddressSection({
       >
         <input
           type="checkbox"
-          checked={addresses.sameAsUserAddress}
+          checked={addresses.sameAsUserAddress ?? false}
           onChange={disabled ? undefined : toggleSameAsCurrentAddress}
           className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-1 focus:ring-blue-500"
           aria-checked={addresses.sameAsUserAddress}
@@ -68,6 +64,7 @@ export const AddressSection = memo(function AddressSection({
         />
         <span>Permanent address same as current address</span>
       </label>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <AddressForm
           title="Current Address"
@@ -77,6 +74,7 @@ export const AddressSection = memo(function AddressSection({
           onChange={onChange}
           disabled={disabled}
         />
+
         <AddressForm
           title="Permanent Address"
           prefix="addresses.permanent"
@@ -90,8 +88,6 @@ export const AddressSection = memo(function AddressSection({
   );
 });
 
-/** ---------- ADDRESS FORM COMPONENT ---------- */
-
 export const AddressForm = memo(function AddressForm({
   title,
   prefix,
@@ -104,7 +100,7 @@ export const AddressForm = memo(function AddressForm({
     <fieldset
       className={cx(
         "border border-gray-300 rounded-xl p-6 bg-gray-50 shadow-sm mb-6",
-        disabled && "opacity-50 pointer-events-none",
+        disabled && "opacity-50 pointer-events-none"
       )}
       aria-disabled={disabled}
     >

@@ -8,8 +8,8 @@ export class EmailTemplates {
   private env: string;
 
   constructor(private readonly configService: ConfigService) {
-    const app = this.configService.get("app");
-    this.env = app.environment;
+    const nodeEnv = this.configService.get("app.nodeEnv");
+    this.env = nodeEnv;
   }
 
   async render(
@@ -22,9 +22,9 @@ export class EmailTemplates {
     const templatePath = path.join(
       process.cwd(),
       isDev ? "src" : "dist",
-      "infrastructure",
-      type,
+      "common",
       "templates",
+      type,
       `${templateName}.ejs`,
     );
 

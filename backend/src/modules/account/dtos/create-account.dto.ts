@@ -4,27 +4,26 @@ import {
   IsOptional,
   IsEmail,
   IsEnum,
-  IsDateString,
+  Matches,
   IsBoolean,
   IsPhoneNumber,
   IsNumber,
   IsUUID,
   ValidateNested,
   Length,
+  ArrayMinSize,
+  ArrayMaxSize,
 } from "class-validator";
-import {
-  AccountType,
-  Gender,
-  OccupationType,
-  AddressType,
-} from "@prisma/client";
+import { Type } from "class-transformer";
+import { Gender, AccountType } from "@prisma/client";
 
 // ----------------------
 // Address DTOs
 // ----------------------
-export class AddressDto {
-  @IsEnum(AddressType)
-  type: AddressType;
+
+export abstract class BaseAddressDto {
+  @IsString()
+  type: string;
 
   @IsString()
   @IsNotEmpty()
@@ -55,26 +54,34 @@ export class AddressDto {
   pinCode: string;
 }
 
-export class NomineeAddressDto extends AddressDto {
-  @IsEnum(AddressType)
-  type: AddressType = AddressType.NOMINEE;
+// Assuming these address DTOs are subclasses with discriminator support
+export class CurrentAddressDto extends BaseAddressDto {
+  type: "CURRENT" = "CURRENT";
+}
+
+export class PermanentAddressDto extends BaseAddressDto {
+  type: "PERMANENT" = "PERMANENT";
 }
 
 // ----------------------
 // Nominee DTO
 // ----------------------
+
 export class NomineeDto {
   @IsString()
+  @IsNotEmpty()
   firstName: string;
 
   @IsString()
+  @IsNotEmpty()
   lastName: string;
 
   @IsString()
+  @IsNotEmpty()
   relation: string;
 
   @IsOptional()
-  @IsString()
+  @IsEmail()
   email?: string;
 
   @IsOptional()
@@ -82,12 +89,23 @@ export class NomineeDto {
   phoneNumber?: string;
 
   @ValidateNested()
-  address: NomineeAddressDto;
+  @Type(() => BaseAddressDto, {
+    discriminator: {
+      property: "type",
+      subTypes: [
+        { value: CurrentAddressDto, name: "CURRENT" },
+        { value: PermanentAddressDto, name: "PERMANENT" },
+      ],
+    },
+    keepDiscriminatorProperty: true,
+  })
+  address: CurrentAddressDto | PermanentAddressDto;
 }
 
 // ----------------------
 // CreateAccount DTO
 // ----------------------
+
 export class CreateAccountDto {
   // ----------- BASIC INFO -----------
   @IsString()
@@ -103,8 +121,8 @@ export class CreateAccountDto {
   fatherSpouse: string;
 
   // ----------- ENUMS -----------
-  @IsEnum(OccupationType)
-  occupation: OccupationType;
+  @IsString()
+  occupation: string;
 
   @IsOptional()
   @IsString()
@@ -113,19 +131,22 @@ export class CreateAccountDto {
   @IsEmail()
   email: string;
 
-  @IsString()
+  @IsPhoneNumber("IN")
   phone: string;
 
   @IsEnum(Gender)
   gender: Gender;
 
-  @IsDateString()
+  // Accept date in YYYY-MM-DD format
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "dob must be in YYYY-MM-DD format",
+  })
   dob: string;
 
   @IsEnum(AccountType)
   type: AccountType;
 
-  // ----------- OPTIONAL FLAGS & IDs -----------
+  // ----------- OPTIONAL FLAGS & IDS -----------
   @IsOptional()
   @IsBoolean()
   isChildAccount?: boolean;
@@ -140,7 +161,6 @@ export class CreateAccountDto {
 
   @IsOptional()
   @IsNumber()
-
   accountOpeningFee?: number;
 
   @IsOptional()
@@ -151,14 +171,26 @@ export class CreateAccountDto {
   @IsString()
   userId?: string;
 
-  // ----------- ADDRESSES -----------
+  // ----------- ADDRESSES (exactly 2 items: current & permanent) -----------
   @ValidateNested({ each: true })
-  addresses: AddressDto[];
-
+  @Type(() => BaseAddressDto, {
+    discriminator: {
+      property: "type",
+      subTypes: [
+        { value: CurrentAddressDto, name: "CURRENT" },
+        { value: PermanentAddressDto, name: "PERMANENT" },
+      ],
+    },
+    keepDiscriminatorProperty: true,
+  })
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  addresses: Array<CurrentAddressDto | PermanentAddressDto>;
 
   // ----------- NOMINEES -----------
   @IsOptional()
   @ValidateNested({ each: true })
+  @Type(() => NomineeDto)
   nominees?: NomineeDto[];
 
   // ----------- FILES (OPTIONAL) -----------

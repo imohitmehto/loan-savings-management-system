@@ -10,6 +10,8 @@ interface GenericListProps<T> {
   renderList: (items: T[]) => React.ReactNode;
   filterFunction?: (item: T, filterText: string) => boolean;
   entriesPerPage?: number;
+  filterText?: string;
+  setFilterText?: (text: string) => void;
 }
 
 export default function GenericList<T>({
@@ -17,15 +19,25 @@ export default function GenericList<T>({
   renderList,
   filterFunction,
   entriesPerPage = 8,
+  filterText: controlledFilterText,
+  setFilterText: setControlledFilterText,
 }: GenericListProps<T>) {
   const [data, setData] = useState<T[]>([]);
   const [filteredData, setFilteredData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterText, setFilterText] = useState("");
+
+  // Internal filter state if no controlled props provided
+  const [internalFilterText, setInternalFilterText] = useState("");
+  const filterText =
+    controlledFilterText !== undefined
+      ? controlledFilterText
+      : internalFilterText;
+  const setFilterText = setControlledFilterText || setInternalFilterText;
+
   const [currentPage, setCurrentPage] = useState(1);
 
-  /** Load data from API on mount */
+  // Load data
   useEffect(() => {
     let isMounted = true;
 
@@ -60,7 +72,7 @@ export default function GenericList<T>({
     };
   }, [fetchData]);
 
-  /** Filtering logic */
+  // Filtering logic
   useEffect(() => {
     if (!filterText.trim()) {
       setFilteredData(data);
@@ -76,7 +88,7 @@ export default function GenericList<T>({
     setCurrentPage(1);
   }, [filterText, data, filterFunction]);
 
-  /** Derived pagination values */
+  // Pagination
   const lastIndex = currentPage * entriesPerPage;
   const firstIndex = lastIndex - entriesPerPage;
   const currentItems = useMemo(
@@ -86,18 +98,17 @@ export default function GenericList<T>({
 
   const totalPages = Math.ceil(filteredData.length / entriesPerPage);
 
-  /** Handle filter change */
+  // Filter input handlers
   const handleFilterChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setFilterText(e.target.value);
     },
-    [],
+    [setFilterText],
   );
 
-  /** Handle clearing filter */
   const clearFilter = useCallback(() => {
     setFilterText("");
-  }, []);
+  }, [setFilterText]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 bg-white rounded-lg shadow-md">

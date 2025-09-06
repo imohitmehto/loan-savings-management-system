@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to Our Platform</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: auto; padding: 20px; }
+    .credentials { background: #f8f8f8; padding: 15px; border-radius: 5px; }
+    .credentials p { margin: 5px 0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p>Hi <%= name %>,</p>
+
+    <p>Welcome to our platform! Your account has been created successfully.</p>
+
+    <div class="credentials">
+      <p>Username: <%= username %></p>
+      <p>Password: <%= password %></p>
+    </div>
+
+    <p>Please login and change your password as soon as possible to keep your account secure.</p>
+
+    <p>Thank you,<br>The Team</p>
+  </div>
+</body>
+</html>

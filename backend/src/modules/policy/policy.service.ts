@@ -31,10 +31,19 @@ export class LoanPolicyService {
       return await this.prisma.loanPolicy.create({
         data: {
           name: dto.name,
-          description: dto.description,
-          interestRate: dto.interestRate ?? 0,
-          minCreditScore: dto.minCreditScore,
-          maxLoanAmount: dto.maxLoanAmount,
+          description: dto.description || null,
+          minAmount: dto.minAmount,
+          maxAmount: dto.maxAmount,
+          interestType: dto.interestType,
+          interestRate: dto.interestRate,
+          termPeriod: dto.termPeriod,
+          maxTerm: dto.maxTerm,
+          applicationFeeType: dto.applicationFeeType,
+          applicationFee: dto.applicationFee,
+          processingFeeType: dto.processingFeeType,
+          processingFee: dto.processingFee,
+          latePaymentPenaltiesType: dto.latePaymentPenaltiesType,
+          latePaymentPenalties: dto.latePaymentPenalties,
           rules: dto.rules,
           isActive: dto.isActive ?? true,
         },
@@ -48,9 +57,8 @@ export class LoanPolicyService {
   /**
    * Returns all active loan policies sorted by most recent.
    */
-  async getAllActivePolicies() {
+  async getAllPolicies() {
     return await this.prisma.loanPolicy.findMany({
-      where: { isActive: true },
       orderBy: { createdAt: "desc" },
     });
   }

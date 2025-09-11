@@ -15,6 +15,7 @@ import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtAuthGuard } from "./modules/auth/guards/jwt-auth.guard";
 import { HealthModule } from "./modules/health/health.module";
+import { SocketGateway } from "./socket/socket.gateway";
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { HealthModule } from "./modules/health/health.module";
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    SocketGateway,
   ],
   exports: [LoggerModule],
 })

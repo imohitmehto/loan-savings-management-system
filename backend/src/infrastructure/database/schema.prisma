@@ -1,14 +1,11 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../../../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// ---------- ENUMS ----------
 
 enum Role {
   ADMIN
@@ -29,13 +26,10 @@ enum TransactionType {
   CAPITAL_INFUSION
   CASH_TO_BANK
   BANK_TO_CASH
-}
-
-enum TransactionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  REVERSED
+  LOAN_DISBURSEMENT
+  EMI_PAYMENT
+  PREPAYMENT
+  FORECLOSURE_PAYMENT
 }
 
 enum InterestType {
@@ -59,13 +53,24 @@ enum FeeType {
   PERCENTAGE
 }
 
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  CLOSED
+  SUSPENDED
+}
+
 enum LoanStatus {
   PENDING
+  UNDER_REVIEW
   APPROVED
   REJECTED
+  DISBURSED
+  ACTIVE
   COMPLETED
   DEFAULTED
   CLOSED
+  FORECLOSED
 }
 
 enum RepaymentStatus {
@@ -73,6 +78,14 @@ enum RepaymentStatus {
   PAID
   LATE
   PARTIALLY_PAID
+  OVERDUE
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVERSED
 }
 
 enum ReportType {
@@ -85,13 +98,6 @@ enum ReportType {
   LOAN_SUMMARY
   CUSTOM
   COLLECTION
-}
-
-enum AccountStatus {
-  PENDING
-  ACTIVE
-  CLOSED
-  SUSPENDED
 }
 
 enum PaymentMode {
@@ -114,7 +120,56 @@ enum AccountType {
   CURRENT
 }
 
-// ---------- MODELS ----------
+enum LoanType {
+  HOME_LOAN
+  VEHICLE_LOAN
+  PERSONAL_LOAN
+  BUSINESS_LOAN
+  EDUCATION_LOAN
+  GOLD_LOAN
+  EMERGENCY_LOAN
+}
+
+enum CalculationType {
+  REDUCING_BALANCE
+  FLAT_RATE
+  COMPOUND_INTEREST
+}
+
+enum EMIStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIALLY_PAID
+  WAIVED
+}
+
+enum ForeclosureStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
+enum PrepaymentType {
+  PARTIAL
+  FULL
+}
+
+enum TransactionCategory {
+  ACCOUNT_DEPOSIT
+  ACCOUNT_WITHDRAWAL
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT
+  INTEREST_INCOME
+  FEE
+  FUND_ALLOCATION
+  PROFIT_DISTRIBUTION
+  ADJUSTMENT
+  EMI_PAYMENT
+  PREPAYMENT
+  FORECLOSURE
+}
 
 model User {
   id         String    @id @default(cuid())
@@ -134,11 +189,17 @@ model User {
   updatedById String?
 
   otps            Otp[]
-  accounts        Account[]     @relation("UserAccounts")
-  transactions    Transaction[] @relation("UserTransactions")
+  accounts        Account[]      @relation("UserAccounts")
+  transactions    Transaction[]  @relation("UserTransactions")
   loans           Loan[]
-  createdAccounts Account[]     @relation("AccountCreatedBy")
-  updatedAccounts Account[]     @relation("AccountUpdatedBy")
+  createdAccounts Account[]      @relation("AccountCreatedBy")
+  updatedAccounts Account[]      @relation("AccountUpdatedBy")
+  notifications   Notification[]
+
+  approvedLoans         Loan[]               @relation("LoanApprovals")
+  rejectedLoans         Loan[]               @relation("LoanRejections")
+  processedForeclosures ForeclosureHistory[]
+  processedPrepayments  PrepaymentHistory[]
 
   @@index([email])
   @@index([phone])
@@ -146,7 +207,7 @@ model User {
 
 model Otp {
   id          String    @id @default(uuid())
-  email       String?
+  email       String    @unique
   phone       String?
   otp         String
   expiresAt   DateTime
@@ -169,28 +230,27 @@ model Account {
   lastName          String
   fatherSpouse      String
   occupation        String
-  companyInstitute  String?
-  email             String?
-  phone             String?
+  companyInstitute  String?       @db.VarChar(255)
+  email             String        @unique
+  phone             String?       @db.VarChar(20)
   gender            Gender
   dob               DateTime      @db.Date
-  photo             String?
-  panCard           String?
-  aadhaarCard       String?
+  photo             String?       @db.VarChar(255)
+  panCard           String?       @db.VarChar(20)
+  aadhaarCard       String?       @db.VarChar(20)
   type              AccountType
-  isMinor           Boolean       @default(false)
-  linkedAccountId   String?
-  accountOpeningFee Decimal
-  balance           Decimal       @default(0)
-  status            AccountStatus @default(PENDING)
-  openedAt          DateTime      @default(now())
-  closedAt          DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  createdById       String?
-  updatedById       String?
-  userId            String
-  groupId           String?
+  accountOpeningFee Decimal       @db.Decimal(12, 2)
+  balance           Decimal       @default(0) @db.Decimal(12, 2)
+  status            AccountStatus
+
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  groupId     String?
+  userId      String
 
   user      User          @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
   group     AccountGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -206,7 +266,6 @@ model Account {
   @@index([accountNumber])
   @@index([userId])
   @@index([groupId])
-  @@index([status])
   @@index([email])
   @@index([phone])
 }
@@ -233,24 +292,35 @@ model Address {
   pinCode      String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  createdBy    String
+  updatedBy    String
   accountId    String?
   account      Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   nominees Nominee[]
+
+  @@index([accountId])
 }
 
 model Nominee {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   firstName   String
   lastName    String
   relation    String
-  email       String?
-  phoneNumber String?
+  email       String?  @db.VarChar(255)
+  phoneNumber String?  @db.VarChar(20)
   accountId   String
   addressId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  updatedBy   String
 
   account Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   address Address? @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([addressId])
 }
 
 model Loan {
@@ -258,16 +328,37 @@ model Loan {
   accountId String
   account   Account @relation(fields: [accountId], references: [id])
 
-  loanType     String
+  loanType     LoanType   @default(PERSONAL_LOAN)
   amount       Decimal    @db.Decimal(12, 2)
   interestRate Decimal    @db.Decimal(5, 2)
   tenureMonths Int
   emiAmount    Decimal    @db.Decimal(12, 2)
   status       LoanStatus @default(PENDING)
 
-  appliedAt  DateTime  @default(now())
-  approvedAt DateTime?
-  closedAt   DateTime?
+  calculationType CalculationType @default(REDUCING_BALANCE)
+  principalAmount Decimal         @db.Decimal(12, 2)
+  totalInterest   Decimal         @db.Decimal(12, 2)
+  totalAmount     Decimal         @db.Decimal(12, 2)
+
+  outstandingPrincipal Decimal @db.Decimal(12, 2)
+  outstandingInterest  Decimal @default(0) @db.Decimal(12, 2)
+
+  allowForeclosure    Boolean @default(true)
+  foreclosureCharges  Decimal @default(2) @db.Decimal(5, 2)
+  allowPrepayment     Boolean @default(true)
+  prepaymentCharges   Decimal @default(1) @db.Decimal(5, 2)
+  minPrepaymentAmount Decimal @default(5000) @db.Decimal(12, 2)
+
+  appliedAt       DateTime  @default(now())
+  approvedAt      DateTime?
+  approvedBy      String?
+  approver        User?     @relation("LoanApprovals", fields: [approvedBy], references: [id])
+  rejectedAt      DateTime?
+  rejectedBy      String?
+  rejecter        User?     @relation("LoanRejections", fields: [rejectedBy], references: [id])
+  rejectionReason String?
+  disbursedAt     DateTime?
+  closedAt        DateTime?
 
   payments      LoanPayment[]
   userId        String?
@@ -276,40 +367,122 @@ model Loan {
   loanPolicyId  String?
   loanPolicy    LoanPolicy?   @relation(fields: [loanPolicyId], references: [id])
   ledgerEntries LedgerEntry[]
+
+  emiSchedule        EMISchedule[]
+  foreclosureHistory ForeclosureHistory[]
+  prepaymentHistory  PrepaymentHistory[]
+
+  @@index([accountId])
+  @@index([userId])
+  @@index([status])
+  @@index([loanType])
+}
+
+model EMISchedule {
+  id                 String    @id @default(uuid())
+  loanId             String
+  loan               Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  emiNumber          Int
+  dueDate            DateTime
+  emiAmount          Decimal   @db.Decimal(12, 2)
+  principalAmount    Decimal   @db.Decimal(12, 2)
+  interestAmount     Decimal   @db.Decimal(12, 2)
+  outstandingBalance Decimal   @db.Decimal(12, 2)
+  status             EMIStatus @default(PENDING)
+  paidDate           DateTime?
+  paidAmount         Decimal?  @db.Decimal(12, 2)
+  penaltyAmount      Decimal?  @default(0) @db.Decimal(12, 2)
+  rebateAmount       Decimal?  @default(0) @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([loanId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model ForeclosureHistory {
+  id                   String            @id @default(uuid())
+  loanId               String
+  loan                 Loan              @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  requestDate          DateTime          @default(now())
+  foreclosureDate      DateTime?
+  outstandingPrincipal Decimal           @db.Decimal(12, 2)
+  outstandingInterest  Decimal           @db.Decimal(12, 2)
+  foreclosureCharges   Decimal           @db.Decimal(12, 2)
+  totalAmount          Decimal           @db.Decimal(12, 2)
+  interestSaved        Decimal           @db.Decimal(12, 2)
+  status               ForeclosureStatus @default(REQUESTED)
+  processedBy          String?
+  processor            User?             @relation(fields: [processedBy], references: [id])
+  remarks              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([loanId])
+  @@index([status])
+}
+
+model PrepaymentHistory {
+  id              String         @id @default(uuid())
+  loanId          String
+  loan            Loan           @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount          Decimal        @db.Decimal(12, 2)
+  charges         Decimal        @default(0) @db.Decimal(12, 2)
+  netAmount       Decimal        @db.Decimal(12, 2)
+  paymentDate     DateTime       @default(now())
+  type            PrepaymentType
+  interestSaved   Decimal        @db.Decimal(12, 2)
+  tenureReduction Int            @default(0)
+  newEMIAmount    Decimal?       @db.Decimal(12, 2)
+  processedBy     String
+  processor       User           @relation(fields: [processedBy], references: [id])
+  remarks         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([loanId])
+  @@index([paymentDate])
 }
 
 model LoanPayment {
-  id     String @id @default(uuid())
-  loanId String
-  loan   Loan   @relation(fields: [loanId], references: [id])
-
-  amount        Decimal     @db.Decimal(12, 2)
-  paymentDate   DateTime    @default(now())
+  id            String          @id @default(uuid())
+  loanId        String
+  loan          Loan            @relation(fields: [loanId], references: [id])
+  amount        Decimal         @db.Decimal(12, 2)
+  paymentDate   DateTime        @default(now())
   mode          PaymentMode
   transactionId String
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  transaction   Transaction     @relation(fields: [transactionId], references: [id])
+  status        RepaymentStatus @default(PENDING)
 
-  status RepaymentStatus @default(PAID)
+  principalPaid Decimal? @db.Decimal(12, 2)
+  interestPaid  Decimal? @db.Decimal(12, 2)
+  penaltyPaid   Decimal? @default(0) @db.Decimal(12, 2)
+  emiNumber     Int?
+  remarks       String?
 
   @@index([loanId])
+  @@index([transactionId])
+  @@index([paymentDate])
 }
 
 model Transaction {
-  id        String  @id @default(uuid())
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id])
-
+  id           String          @id @default(uuid())
+  accountId    String
+  account      Account         @relation(fields: [accountId], references: [id])
   type         TransactionType
   amount       Decimal         @db.Decimal(12, 2)
   balanceAfter Decimal         @db.Decimal(12, 2)
+  description  String?
+  createdAt    DateTime        @default(now())
+  userId       String?
+  user         User?           @relation("UserTransactions", fields: [userId], references: [id])
 
-  description String?
-  createdAt   DateTime @default(now())
-
-  userId String?
-  user   User?   @relation("UserTransactions", fields: [userId], references: [id])
-
-  loanPayment LoanPayment[]
+  loanPayments LoanPayment[]
 
   @@index([accountId])
   @@index([type])
@@ -321,7 +494,7 @@ model Repayment {
   id       String          @id @default(uuid())
   dueDate  DateTime
   paidDate DateTime?
-  amount   Decimal
+  amount   Decimal         @db.Decimal(12, 2)
   status   RepaymentStatus
   loanId   String
   loan     Loan            @relation(fields: [loanId], references: [id])
@@ -334,36 +507,37 @@ model LoanPolicy {
   id                       String       @id @default(uuid())
   name                     String
   description              String?
-  minAmount                Decimal
-  maxAmount                Decimal
+  loanType                 LoanType     @default(PERSONAL_LOAN)
+  minAmount                Decimal      @db.Decimal(12, 2)
+  maxAmount                Decimal      @db.Decimal(12, 2)
   interestType             InterestType
   interestRate             Float
   termPeriod               TermPeriod
   maxTerm                  Int
+  minTerm                  Int          @default(1)
   applicationFeeType       FeeType
-  applicationFee           Decimal
+  applicationFee           Decimal      @db.Decimal(12, 2)
   processingFeeType        FeeType
-  processingFee            Decimal
+  processingFee            Decimal      @db.Decimal(12, 2)
   latePaymentPenaltiesType FeeType
-  latePaymentPenalties     Decimal
-  rules                    String[]
-  isActive                 Boolean      @default(true)
-  createdAt                DateTime     @default(now())
-  updatedAt                DateTime     @updatedAt
+  latePaymentPenalties     Decimal      @db.Decimal(12, 2)
+
+  allowForeclosure    Boolean @default(true)
+  foreclosureCharges  Decimal @default(2) @db.Decimal(5, 2)
+  allowPrepayment     Boolean @default(true)
+  prepaymentCharges   Decimal @default(1) @db.Decimal(5, 2)
+  minPrepaymentAmount Decimal @default(5000) @db.Decimal(12, 2)
+  gracePeriodDays     Int     @default(5)
+
+  rules     String[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   loans Loan[]
-}
 
-enum TransactionCategory {
-  ACCOUNT_DEPOSIT
-  ACCOUNT_WITHDRAWAL
-  LOAN_DISBURSEMENT
-  LOAN_REPAYMENT
-  INTEREST_INCOME
-  FEE
-  FUND_ALLOCATION
-  PROFIT_DISTRIBUTION
-  ADJUSTMENT
+  @@index([loanType])
+  @@index([isActive])
 }
 
 model LedgerEntry {
@@ -374,17 +548,34 @@ model LedgerEntry {
   debitAccount  String?
   creditAccount String?
   balanceAfter  Decimal?            @db.Decimal(12, 2)
+  accountId     String?
+  account       Account?            @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  loanId        String?
+  loan          Loan?               @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  createdAt     DateTime            @default(now())
+  createdById   String?
 
-  accountId String?
-  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
-
-  loanId String?
-  loan   Loan?   @relation(fields: [loanId], references: [id], onDelete: SetNull)
-
-  createdAt   DateTime @default(now())
-  createdById String?
+  transactionId String?
+  emiNumber     Int?
+  referenceId   String?
 
   @@index([accountId])
   @@index([loanId])
   @@index([createdAt])
+  @@index([category])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  metadata  Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
 }

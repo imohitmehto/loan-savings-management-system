@@ -1,12 +1,12 @@
-import { Module } from "@nestjs/common";
-import { LoggerModule } from "src/infrastructure/logger/logger.module";
-import { LoanController } from "./loan.controller";
-import { LoanService } from "./loan.service";
-import { CommonModule } from "src/common/common.module";
+import { Module } from '@nestjs/common';
+import { PrismaModule } from 'src/infrastructure/database/prisma.module';
 
 @Module({
-  imports: [LoggerModule, CommonModule],
-  controllers: [LoanController],
-  providers: [LoanService],
+  imports: [PrismaModule],
+  providers: [
+  ],
+  exports: [
+  ],
 })
-export class LoanModule {}
+export class LoanModule { }
+

@@ -15,34 +15,26 @@ import {
 } from "./dtos";
 import { AccountNumberUtil } from "../../common/utils/account_number.util";
 import { Hash } from "src/common/utils/hash.util";
-import { Account, AccountGroup, Role } from "@prisma/client";
+import { Account, AccountGroup, Role, User } from "@prisma/client";
 import { generateTempPassword } from "src/common/utils/temp_password.util";
 import { UserService } from "../user/user.service";
-import { formatPhoneNumber } from "src/common/utils/format_phone_number.util";
-import { toPrismaUpdate } from "src/common/utils/object.util";
 import { ConfigService } from "@nestjs/config";
 import { MailService } from "src/infrastructure/mail/mail.service";
 import { SmsService } from "src/infrastructure/sms/sms.service";
-import { UserNameUtil } from "src/common/utils/user_name.util";
 import { AccountAlreadyExistsException } from "./exceptions/user-exceptions";
-import { OtpService } from "src/infrastructure/otp/otp.service";
 
 @Injectable()
 export class AccountService {
-
   private readonly logger = new Logger(AccountService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
-    private readonly userNameUtil: UserNameUtil,
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
     private readonly accountNumberUtil: AccountNumberUtil,
     private readonly hashService: Hash,
     private readonly configService: ConfigService,
-    private readonly otpService: OtpService,
-
   ) { }
 
   /**
@@ -86,7 +78,6 @@ export class AccountService {
     },
   ): Promise<{ message: string; data: Account }> {
     try {
-      console.log("dto", dto);
       // Map uploaded file names (filenames only)
       this.mapUploadedFiles(dto, files);
 
@@ -102,64 +93,107 @@ export class AccountService {
         dto.aadhaarCard = `${baseUrl}/uploads/account/${dto.aadhaarCard}`;
       }
 
-      const user = await this.userService.findByEmail(dto.email);
+      const user = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
 
       if (user) {
-        const account = await this.prisma.account.findUnique({ where: { dto.email } })
+        const account = await this.prisma.account.findFirst({
+          where: { email: dto.email },
+        });
 
         if (account) throw new AccountAlreadyExistsException(dto.email);
       }
+
+      let newUser: User | null = null;
+
+      let tempPassword = "";
       if (!user) {
-
-        const tempPassword = generateTempPassword();
+        tempPassword = generateTempPassword();
         const password = await this.hashService.hashPassword(tempPassword);
-        const data = {
-          email: dto.email,
-          password: password,
-          phone: dto.phone,
-          isVerified: false,
-          isActive: false,
-          role: Role.CUSTOMER,
-        }
-        const newUser = await this.userService.createUser(data);
 
-        try {
-          await this.otpService.sendOtp(newUser.id, newUser.email);
-        } catch (err) {
-          this.logger.error(`Failed to send OTP to ${newUser.email}`, err);
-          throw new InternalServerErrorException(
-            "Failed to send OTP. Please try again later.",
-          );
-        }
+        newUser = await this.prisma.user.create({
+          data: {
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            email: dto.email,
+            password: password,
+            phone: dto.phone,
+            isVerified: false,
+            isActive: false,
+            role: Role.CUSTOMER,
+          },
+        });
       }
 
       // Generate unique account number
       const accountNumber =
         await this.accountNumberUtil.generateAccountNumber();
 
+      let accountOpeningFee = 0;
 
-      // Create account
       const account = await this.prisma.account.create({
         data: {
           accountNumber,
           firstName: dto.firstName,
           lastName: dto.lastName,
-          fatherSpouse: dto.fatherSpouse ?? "",
+          fatherSpouse: dto.fatherSpouse ?? null,
           occupation: dto.occupation,
-          companyInstitute: dto.companyInstitute ?? "",
+          companyInstitute: dto.companyInstitute ?? null,
           email: dto.email,
-          phone: dto.phone ?? "",
+          phone: dto.phone ?? null,
           gender: dto.gender,
-          dob: dto.dob,
+          dob: new Date(dto.dob),
           type: dto.type,
-          groupId: dto.groupId || undefined,
-          accountOpeningFee: dto.accountOpeningFee ?? 0,
-          photo: dto.photo ?? "",
-          panCard: dto.panCard ?? "",
-          aadhaarCard: dto.aadhaarCard ?? "",
-          userId: userId ?? "",
-          nominees: nomineeData,
-          addresses: addressData,
+          group: dto.groupId ? { connect: { id: dto.groupId } } : undefined,
+          accountOpeningFee: accountOpeningFee ?? 0,
+          photo: dto.photo ?? null,
+          panCard: dto.panCard ?? null,
+          aadhaarCard: dto.aadhaarCard ?? null,
+
+          user: {
+            connect: { id: user?.id ?? newUser?.id },
+          },
+
+          addresses: {
+            create: dto.addresses.map((addr) => ({
+              type: addr.type,
+              addressLine1: addr.addressLine1,
+              addressLine2: addr.addressLine2 ?? undefined,
+              landmark: addr.landmark ?? undefined,
+              city: addr.city,
+              state: addr.state,
+              country: addr.country,
+              pinCode: addr.pinCode,
+            })),
+          },
+
+          nominees:
+            dto.nominees && dto.nominees.length > 0
+              ? {
+                create: dto.nominees.map((nom) => ({
+                  firstName: nom.firstName,
+                  lastName: nom.lastName,
+                  relation: nom.relation,
+                  email: nom.email ?? undefined,
+                  phoneNumber: nom.phoneNumber ?? undefined,
+                  address: nom.address
+                    ? {
+                      create: {
+                        type: nom.address.type,
+                        addressLine1: nom.address.addressLine1,
+                        addressLine2: nom.address.addressLine2 ?? undefined,
+                        landmark: nom.address.landmark ?? undefined,
+                        city: nom.address.city,
+                        state: nom.address.state,
+                        country: nom.address.country,
+                        pinCode: nom.address.pinCode,
+                      },
+                    }
+                    : undefined,
+                })),
+              }
+              : undefined,
         },
         include: {
           nominees: { include: { address: true } },
@@ -167,54 +201,38 @@ export class AccountService {
         },
       });
 
-      if (!user) {
-        throw new InternalServerErrorException(
-          "User not found after account creation",
-        );
-      }
-
-      // Assuming you have a way to get the plain password at this point.
-      // If you store hashed passwords only, consider generating a temp password instead.
-      const userName = user.userName;
-      const password = user.password; // Adapt accordingly
-      if (!password) {
-        throw new InternalServerErrorException(
-          "User password not available for sending",
-        );
-      }
-
-      // Send email if email exists
-      if (dto.email) {
+      if (dto.email && Role.ADMIN) {
         try {
           await this.mailService.sendMail(dto.email, "new-user-email", {
             name: `${dto.firstName} ${dto.lastName}`,
-            username: userName,
-            password: password,
-            subject: "Welcome to Our Service - Your Account Details",
+            password: tempPassword,
+            subject: "Welcome to Our Service - Your User Account Details",
           });
         } catch (error) {
           console.error("Failed to send welcome email:", error);
         }
       }
 
-      // Send SMS if phone exists
-      if (dto.phone) {
-        try {
-          await this.smsService.sendSms(dto.phone, "new-user-sms", {
-            name: `${dto.firstName} ${dto.lastName}`,
-            username: userName,
-            password: password,
-          });
-        } catch (error) {
-          console.error("Failed to send welcome SMS:", error);
-        }
-      }
+      // if (!dto.role || dto.role !== Role.ADMIN) {
+      //   const notificationPayload = {
+      //     message: `New account created by user with email: ${dto.email}`,
+      //     accountId: account.id,
+      //     userEmail: dto.email,
+      //     timestamp: new Date(),
+      //   };
+
+      //   try {
+      //     await this.notificationService.sendNotificationToAdmin(notificationPayload);
+      //   } catch (notifyError) {
+      //     // Optionally, handle failure silently without blocking
+      //   }
+      // }
 
       return { message: "Account created successfully", data: account };
     } catch (error) {
       console.error("CreateAccountError:", error);
       if (error instanceof BadRequestException) {
-        throw error; // Pass known BadRequestException errors to controller
+        throw error;
       }
       throw new InternalServerErrorException("Failed to create account");
     }
@@ -237,20 +255,34 @@ export class AccountService {
       throw new NotFoundException(`Account with ID ${id} not found`);
     }
 
-    this.mapUploadedFiles(dto, files);
-
-    // Convert dob string to Date if present
-    if (dto.dob) {
-      dto.dob = new Date(dto.dob) as any;
+    // Map uploaded files to DTO
+    if (files) {
+      this.mapUploadedFiles(dto, files);
     }
 
-    // Remove undefined fields and specifically userId if undefined
+    // Helper function to clean update data
+    function toPrismaUpdate(input: UpdateAccountDto) {
+      // Destructure to exclude system fields
+      const {
+        userId,
+        id: dtoId,
+        ...cleanData
+      } = input;
+
+      // Remove any remaining undefined values
+      const filteredData = Object.fromEntries(
+        Object.entries(cleanData).filter(([_, value]) => value !== undefined)
+      );
+
+      return filteredData;
+    }
+
     const updateData = toPrismaUpdate(dto);
 
     try {
       return await this.prisma.account.update({
         where: { id },
-        data: updateData, // Now safe for Prisma
+        data: updateData,
       });
     } catch (error) {
       console.error("UpdateAccountError:", error);
@@ -271,14 +303,11 @@ export class AccountService {
   }
 
   async ValidateEmail(email: string): Promise<boolean> {
-
-    const account = await this.prisma.account.findUnique({ where: { email } })
+    const account = await this.prisma.account.findUnique({ where: { email } });
 
     if (!account) return false;
     else return true;
   }
-
-
 
   /*  *************** ACCOUNT GROUP ***************  */
 
@@ -387,7 +416,7 @@ export class AccountService {
    * Map uploaded file names into the DTO.
    */
   private mapUploadedFiles(
-    dto: CreateAccountDto,
+    dto: CreateAccountDto | UpdateAccountDto,
     files?: {
       photo?: Express.Multer.File[];
       panCard?: Express.Multer.File[];
@@ -406,8 +435,8 @@ export class AccountService {
   }
 
   /**
- * Prepares nominee data for Prisma create.
- */
+   * Prepares nominee data for Prisma create.
+   */
   private prepareNomineeData(dto: CreateAccountDto) {
     if (!Array.isArray(dto.nominees) || dto.nominees.length === 0)
       return undefined;
@@ -443,5 +472,4 @@ export class AccountService {
       })),
     };
   }
-
 }

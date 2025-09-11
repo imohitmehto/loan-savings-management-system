@@ -143,6 +143,11 @@ async function bootstrap() {
 
     app.useLogger(logger);
 
+    app.enableCors({
+      origin: "*", // or your frontend URL
+      credentials: true,
+    });
+
     /**
      * CORS
      */

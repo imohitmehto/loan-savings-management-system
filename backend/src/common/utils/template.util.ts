@@ -1,11 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as ejs from "ejs";
 import * as path from "path";
 
 @Injectable()
-export class EmailTemplates {
+export class Templates {
   private env: string;
+  private readonly logger = new Logger(Templates.name);
 
   constructor(private readonly configService: ConfigService) {
     const nodeEnv = this.configService.get("app.nodeEnv");
@@ -28,6 +29,7 @@ export class EmailTemplates {
       `${templateName}.ejs`,
     );
 
-    return ejs.renderFile(templatePath, data);
+    const rendered = await ejs.renderFile(templatePath, data);
+    return rendered;
   }
 }

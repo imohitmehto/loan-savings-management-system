@@ -1,0 +1,187 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "backend/**"
+      - ".github/workflows/**"
+      - "docker-compose.yml"
+      - "deploy.sh"
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Force deployment of all services"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  VPS_HOST: ${{ secrets.VPS_HOST }}
+  VPS_USER: ${{ secrets.VPS_USER }}
+  SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+  COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web_changed: ${{ steps.check.outputs.web_changed }}
+      backend_changed: ${{ steps.check.outputs.backend_changed }}
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed paths
+        id: check
+        run: |
+          if [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
+            echo "web_changed=true" >> $GITHUB_OUTPUT
+            echo "backend_changed=true" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+          else
+            CHANGED=$(git ls-files)
+          fi
+
+          web_changed=false
+          backend_changed=false
+
+          if echo "$CHANGED" | grep -qE '^web/'; then
+            web_changed=true
+          fi
+
+          if echo "$CHANGED" | grep -qE '^backend/'; then
+            backend_changed=true
+          fi
+
+          should_deploy=false
+          if [ "$web_changed" = "true" ] || [ "$backend_changed" = "true" ] || echo "$CHANGED" | grep -qE '^(docker-compose\.yml|deploy\.sh)'; then
+            should_deploy=true
+          fi
+
+          echo "web_changed=$web_changed" >> $GITHUB_OUTPUT
+          echo "backend_changed=$backend_changed" >> $GITHUB_OUTPUT
+          echo "should_deploy=$should_deploy" >> $GITHUB_OUTPUT
+
+  build-web:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:web-${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:web-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:backend-${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:backend-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [detect-changes, build-web, build-backend]
+    if: |
+      always() && 
+      needs.detect-changes.outputs.should_deploy == 'true' && 
+      (needs.build-web.result == 'success' || needs.build-web.result == 'skipped') &&
+      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.yml,deploy.sh"
+          target: ${{ secrets.DOCKER_COMPOSE_DIR }}
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 300s
+          envs: |
+            DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,COMPOSE_DIR
+          script: |
+            cd "${COMPOSE_DIR}"
+            chmod +x deploy.sh
+            ./deploy.sh
+
+      - name: Run migrations
+        if: needs.detect-changes.outputs.backend_changed == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: COMPOSE_DIR
+          script: |
+            cd "${COMPOSE_DIR}"
+            echo "🗃️ Running database migrations..."
+            docker compose exec -T backend npx prisma migrate deploy || echo "⚠️ No migrations to run"

@@ -9,6 +9,7 @@ import {
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Role } from "@prisma/client";
+import { Transform } from "class-transformer";
 
 export class RegisterDto {
   @ApiProperty({
@@ -41,7 +42,8 @@ export class RegisterDto {
   })
   @IsOptional()
   @IsPhoneNumber("IN")
-  phone?: string;
+  @Transform(({ value }) => (value && value.trim() !== "" ? value : null))
+  phone?: string | null;
 
   @ApiProperty({
     example: "@#$strongPassword123",

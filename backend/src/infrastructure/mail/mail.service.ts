@@ -5,8 +5,7 @@ import {
 } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
-import { EmailTemplates } from "../../common/utils/template.util";
-import { AuthService } from "src/modules/auth/auth.service";
+import { Templates } from "../../common/utils/template.util";
 
 @Injectable()
 export class MailService {
@@ -16,7 +15,7 @@ export class MailService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly template: EmailTemplates,
+    private readonly template: Templates,
   ) {
     const host = this.configService.get<string>("app.email.host")!;
     const port = this.configService.get<number>("app.email.port")!;

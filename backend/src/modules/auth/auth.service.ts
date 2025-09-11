@@ -57,18 +57,18 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
   ) {
-    this.jwtSecret = this.config.get<string>("app.jwt.secret");
-    this.jwtRefreshSecret = this.config.get<string>("app.jwt.refreshSecret");
-    this.jwtExpiresIn = this.config.get<string>("app.jwt.expiresIn");
+    this.jwtSecret = this.config.get<string>("app.jwt.secret")!;
+    this.jwtRefreshSecret = this.config.get<string>("app.jwt.refreshSecret")!;
+    this.jwtExpiresIn = this.config.get<string>("app.jwt.expiresIn")!;
     this.jwtRefreshExpiresIn = this.config.get<string>(
       "app.jwt.refreshExpiresIn",
-    );
+    )!;
 
-    this.otpTtlMs = this.config.get<number>("app.otp.ttlMs");
+    this.otpTtlMs = this.config.get<number>("app.otp.ttlMs")!;
     this.otpResendCooldownMs = this.config.get<number>(
       "app.otp.resendCooldownMs",
-    );
-    this.otpMaxResend = this.config.get<number>("app.otp.maxResend");
+    )!;
+    this.otpMaxResend = this.config.get<number>("app.otp.maxResend")!;
   }
 
   // -------------------- Public API -------------------- //
@@ -107,7 +107,6 @@ export class AuthService {
           },
         });
 
-        // create initial OTP record using otpService which may encapsulate provider details
         const otp = this.generateOtp();
         const expiresAt = new Date(Date.now() + this.otpTtlMs);
 
@@ -147,6 +146,8 @@ export class AuthService {
     }
 
     const response: RegisterResponse = {
+      name: [user.firstName, user.lastName].filter(Boolean).join(" "),
+      email: user.email,
       role: user.role,
       isVerified: user.isVerified,
     };
@@ -318,11 +319,10 @@ export class AuthService {
     return {
       user: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastLogin,
+        name: [user.firstName, user.lastName].filter(Boolean).join(" "),
         role: user.role,
         email: user.email,
-        phone: phone,
+        phone: user.phone,
         isVerified: user.isVerified,
         lastLogin: user.lastLogin,
       },
@@ -448,23 +448,23 @@ export class AuthService {
   private async dispatchOtp(
     email?: string | null,
     phone?: string | null,
-    userName?: string,
+    name?: string,
     otp?: string,
   ) {
     try {
       const tasks = [] as Promise<any>[];
-      if (email && userName && otp) {
+      if (email && name && otp) {
         tasks.push(
           this.mailService.sendMail(email, "otp-email", {
-            name: userName,
+            name: name,
             otp,
             subject: "Your One-Time Password (OTP)",
           }),
         );
       }
-      if (phone && userName && otp) {
-        tasks.push(this.smsService.sendOtp(phone, userName, otp));
-      }
+      // if (phone && name && otp) {
+      //   tasks.push(this.smsService.sendOtp(phone, name, otp));
+      // }
 
       await Promise.all(tasks);
     } catch (err) {

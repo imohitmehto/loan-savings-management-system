@@ -5,17 +5,19 @@ import {
   IsEmail,
   IsEnum,
   Matches,
-  IsBoolean,
   IsPhoneNumber,
-  IsNumber,
   IsUUID,
   ValidateNested,
   Length,
   ArrayMinSize,
   ArrayMaxSize,
 } from "class-validator";
-import { Type } from "class-transformer";
+import { Type, Transform } from "class-transformer";
 import { Gender, AccountType } from "@prisma/client";
+
+function EmptyStringToUndefined() {
+  return Transform(({ value }) => (value === "" ? undefined : value));
+}
 
 // ----------------------
 // Address DTOs
@@ -31,10 +33,12 @@ export abstract class BaseAddressDto {
 
   @IsOptional()
   @IsString()
+  @EmptyStringToUndefined()
   addressLine2?: string;
 
   @IsOptional()
   @IsString()
+  @EmptyStringToUndefined()
   landmark?: string;
 
   @IsString()
@@ -54,7 +58,6 @@ export abstract class BaseAddressDto {
   pinCode: string;
 }
 
-// Assuming these address DTOs are subclasses with discriminator support
 export class CurrentAddressDto extends BaseAddressDto {
   type: "CURRENT" = "CURRENT";
 }
@@ -82,10 +85,12 @@ export class NomineeDto {
 
   @IsOptional()
   @IsEmail()
+  @EmptyStringToUndefined()
   email?: string;
 
   @IsOptional()
   @IsPhoneNumber("IN")
+  @EmptyStringToUndefined()
   phoneNumber?: string;
 
   @ValidateNested()
@@ -126,6 +131,7 @@ export class CreateAccountDto {
 
   @IsOptional()
   @IsString()
+  @EmptyStringToUndefined()
   companyInstitute?: string;
 
   @IsEmail()
@@ -147,28 +153,15 @@ export class CreateAccountDto {
   type: AccountType;
 
   // ----------- OPTIONAL FLAGS & IDS -----------
-  @IsOptional()
-  @IsBoolean()
-  isChildAccount?: boolean;
 
   @IsOptional()
   @IsUUID()
-  parentAccountId?: string;
-
-  @IsOptional()
-  @IsUUID()
+  @EmptyStringToUndefined()
   groupId?: string;
 
   @IsOptional()
-  @IsNumber()
-  accountOpeningFee?: number;
-
-  @IsOptional()
-  @IsString()
-  status?: string;
-
-  @IsOptional()
-  @IsString()
+  @IsUUID()
+  @EmptyStringToUndefined()
   userId?: string;
 
   // ----------- ADDRESSES (exactly 2 items: current & permanent) -----------
@@ -196,13 +189,16 @@ export class CreateAccountDto {
   // ----------- FILES (OPTIONAL) -----------
   @IsOptional()
   @IsString()
+  @EmptyStringToUndefined()
   photo?: string;
 
   @IsOptional()
   @IsString()
+  @EmptyStringToUndefined()
   panCard?: string;
 
   @IsOptional()
   @IsString()
+  @EmptyStringToUndefined()
   aadhaarCard?: string;
 }

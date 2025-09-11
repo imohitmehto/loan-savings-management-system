@@ -3,7 +3,7 @@ import { Twilio } from "twilio";
 import { ConfigService } from "@nestjs/config";
 import * as ejs from "ejs";
 import * as path from "path";
-import { EmailTemplates } from "../../common/utils/template.util";
+import { Templates } from "../../common/utils/template.util";
 
 @Injectable()
 export class SmsService {
@@ -12,7 +12,7 @@ export class SmsService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly template: EmailTemplates,
+    private readonly template: Templates,
   ) {
     const phoneNumber = this.configService.get("app.twilio.phoneNumber")!;
 

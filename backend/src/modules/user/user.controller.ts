@@ -19,7 +19,7 @@ import { Role } from "@prisma/client";
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @Get("profile")
   @ApiOperation({ summary: "Get current user profile" })
   @ApiResponse({ status: 200, description: "User profile retrieved" })

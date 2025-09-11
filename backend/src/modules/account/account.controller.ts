@@ -60,91 +60,91 @@ export class AccountController {
   /**
    * Create new account with file uploads (ADMIN only)
    */
-  @Post("create")
-  @Roles(Role.ADMIN)
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: "photo", maxCount: 1 },
-        { name: "panCard", maxCount: 1 },
-        { name: "aadhaarCard", maxCount: 1 },
-      ],
-      accountMulterConfig,
-    ),
-  )
-  async create(
-    @Req() req: any,
-    @UploadedFiles()
-    files: {
-      photo?: Express.Multer.File[];
-      panCard?: Express.Multer.File[];
-      aadhaarCard?: Express.Multer.File[];
-    },
-  ) {
-    try {
-      // Raw FormData body
-      const body = req.body;
+  // @Post("create")
+  // @Roles(Role.ADMIN)
+  // @HttpCode(HttpStatus.CREATED)
+  // @UseInterceptors(
+  //   FileFieldsInterceptor(
+  //     [
+  //       { name: "photo", maxCount: 1 },
+  //       { name: "panCard", maxCount: 1 },
+  //       { name: "aadhaarCard", maxCount: 1 },
+  //     ],
+  //     accountMulterConfig,
+  //   ),
+  // )
+  // async create(
+  //   @Req() req: any,
+  //   @UploadedFiles()
+  //   files: {
+  //     photo?: Express.Multer.File[];
+  //     panCard?: Express.Multer.File[];
+  //     aadhaarCard?: Express.Multer.File[];
+  //   },
+  // ) {
+  //   try {
+  //     // Raw FormData body
+  //     const body = req.body;
 
-      // console.log("Raw body:", body);
+  //     // console.log("Raw body:", body);
 
-      // Parse flat FormData into nested objects
-      const parsedBody = parseFormDataBody(body);
-      console.log("Parsing addresses:", parsedBody);
+  //     // Parse flat FormData into nested objects
+  //     const parsedBody = parseFormDataBody(body);
+  //     console.log("Parsing addresses:", parsedBody);
 
-      // JSON.parse stringified arrays if needed
-      if (typeof parsedBody.addresses === "string") {
-        parsedBody.addresses = JSON.parse(parsedBody.addresses);
-      }
-      if (typeof parsedBody.nominees === "string") {
-        parsedBody.nominees = JSON.parse(parsedBody.nominees);
-      }
+  //     // JSON.parse stringified arrays if needed
+  //     if (typeof parsedBody.addresses === "string") {
+  //       parsedBody.addresses = JSON.parse(parsedBody.addresses);
+  //     }
+  //     if (typeof parsedBody.nominees === "string") {
+  //       parsedBody.nominees = JSON.parse(parsedBody.nominees);
+  //     }
 
-      if (Array.isArray(parsedBody.nominees)) {
-        parsedBody.nominees = parsedBody.nominees.map((nominee) => {
-          if (typeof nominee.address === "string") {
-            try {
-              nominee.address = JSON.parse(nominee.address);
-            } catch {
-              // keep as string if not valid JSON
-            }
-          }
-          return nominee;
-        });
-      }
-      console.log("Parsed body:", parsedBody);
+  //     if (Array.isArray(parsedBody.nominees)) {
+  //       parsedBody.nominees = parsedBody.nominees.map((nominee) => {
+  //         if (typeof nominee.address === "string") {
+  //           try {
+  //             nominee.address = JSON.parse(nominee.address);
+  //           } catch {
+  //             // keep as string if not valid JSON
+  //           }
+  //         }
+  //         return nominee;
+  //       });
+  //     }
+  //     console.log("Parsed body:", parsedBody);
 
-      // Convert isChildAccount to boolean
-      if (parsedBody.isChildAccount !== undefined) {
-        parsedBody.isChildAccount =
-          parsedBody.isChildAccount === "true" ||
-          parsedBody.isChildAccount === true;
-      }
+  //     // Convert isChildAccount to boolean
+  //     if (parsedBody.isChildAccount !== undefined) {
+  //       parsedBody.isChildAccount =
+  //         parsedBody.isChildAccount === "true" ||
+  //         parsedBody.isChildAccount === true;
+  //     }
 
-      // Attach uploaded filenames
-      if (files.photo?.[0]) {
-        parsedBody.photo = files.photo[0].filename;
-      }
-      if (files.panCard?.[0]) {
-        parsedBody.panCard = files.panCard[0].filename;
-      }
-      if (files.aadhaarCard?.[0]) {
-        parsedBody.aadhaarCard = files.aadhaarCard[0].filename;
-      }
+  //     // Attach uploaded filenames
+  //     if (files.photo?.[0]) {
+  //       parsedBody.photo = files.photo[0].filename;
+  //     }
+  //     if (files.panCard?.[0]) {
+  //       parsedBody.panCard = files.panCard[0].filename;
+  //     }
+  //     if (files.aadhaarCard?.[0]) {
+  //       parsedBody.aadhaarCard = files.aadhaarCard[0].filename;
+  //     }
 
-      // Transform into DTO (validates format dd-mm-yyyy for dob,
-      // exactly two addresses: CURRENT & PERMANENT, optional nominees array)
-      const dto = plainToClass(CreateAccountDto, parsedBody);
+  //     // Transform into DTO (validates format dd-mm-yyyy for dob,
+  //     // exactly two addresses: CURRENT & PERMANENT, optional nominees array)
+  //     const dto = plainToClass(CreateAccountDto, parsedBody);
 
-      // Pass to service
-      return await this.accountService.createAccount(dto, files);
-    } catch (error) {
-      throw new HttpException(
-        error.message || "Failed to create account",
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
+  //     // Pass to service
+  //     return await this.accountService.createAccount(dto, files);
+  //   } catch (error) {
+  //     throw new HttpException(
+  //       error.message || "Failed to create account",
+  //       error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+  //     );
+  //   }
+  // }
 
   /**
    * Update account with file uploads (ADMIN only)
@@ -215,12 +215,12 @@ export class AccountController {
     };
   }
 
-  @Get("/validate/:email")
-  @Roles(Role.ADMIN)
-  @HttpCode(HttpStatus.OK)
-  async ValidateEmail(@Param("email") email: string) {
-    return await this.accountService.ValidateEmail(email);
-  }
+  // @Get("/validate/:email")
+  // @Roles(Role.ADMIN)
+  // @HttpCode(HttpStatus.OK)
+  // async ValidateEmail(@Param("email") email: string) {
+  //   return await this.accountService.ValidateEmail(email);
+  // }
 
   // ------------------ ACCOUNT GROUP ENDPOINTS ------------------
 

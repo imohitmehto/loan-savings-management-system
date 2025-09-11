@@ -9,8 +9,7 @@ export interface JwtPayload {
 export interface LoginResponse {
   user: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     role: string;
     email: string;
     phone: string | null;
@@ -24,6 +23,8 @@ export interface LoginResponse {
 }
 
 export interface RegisterResponse {
+  name: string;
+  email: string;
   role?: string;
   isVerified: boolean;
 }

@@ -51,7 +51,7 @@ export default registerAs("app", () => ({
     ttlMs: process.env.TTLMS ?? 5 * 60 * 1000, // 5 minutes
     resendCooldownMs: process.env.RESENDCOOLDOWNMS ?? 30 * 1000, // 30s
     maxResend: process.env.MAXRESEND ?? 5,
-  }
+  },
 
   // ====================
   // 📧 Email (NodeMailer)
@@ -63,17 +63,6 @@ export default registerAs("app", () => ({
     secure: process.env.EMAIL_SECURE,
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  },
-
-  // ====================
-  // 📱 SMS (Twilio)
-  // ====================
-  sms: {
-    twilio: {
-      sid: process.env.TWILIO_ACCOUNT_SID,
-      token: process.env.TWILIO_AUTH_TOKEN,
-      from: process.env.TWILIO_PHONE_NUMBER,
-    },
   },
 
   // ====================
@@ -140,28 +129,9 @@ export default registerAs("app", () => ({
   },
 
   // ====================
-  // 🔐 Logging
-  // ====================
-  logging: {
-    level: process.env.LOG_LEVEL,
-    filePath: process.env.LOG_FILE_PATH,
-    maxSize: process.env.LOG_MAX_SIZE,
-    maxFiles: process.env.LOG_MAX_FILES,
-    format: process.env.LOG_FORMAT,
-  },
-
-  // ====================
   // 🔐 Feature Flags
   // ====================
   features: {
     swagger: process.env.SWAGGER_ENABLED === "true",
-  },
-
-  // ====================
-  // 🔐 Maintenance Mode
-  // ====================
-  maintenance: {
-    enabled: process.env.MAINTENANCE_MODE === "true",
-    message: process.env.MAINTENANCE_MESSAGE,
   },
 }));

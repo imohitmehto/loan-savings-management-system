@@ -9,7 +9,7 @@ RUN npm ci --only=production --no-audit --no-fund
 # Stage 2: builder
 FROM node:18-alpine AS builder
 WORKDIR /app
-COPY web/ .
+COPY . .
 # install dev deps for build
 RUN npm ci
 RUN npm run build

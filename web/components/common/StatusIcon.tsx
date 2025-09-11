@@ -1,10 +1,10 @@
-"use client";
-import React from "react";
+'use client';
+import React from 'react';
 import {
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
-} from "@heroicons/react/24/solid";
+} from '@heroicons/react/24/solid';
 
 type StatusConfig = {
   icon: React.ElementType;
@@ -15,38 +15,38 @@ type StatusConfig = {
 const STATUS_MAP: Record<string, StatusConfig> = {
   ACTIVE: {
     icon: CheckCircleIcon,
-    color: "text-green-500",
-    label: "Active",
+    color: 'text-green-500',
+    label: 'Active',
   },
   INACTIVE: {
     icon: ClockIcon,
-    color: "text-yellow-400",
-    label: "Inactive",
+    color: 'text-yellow-400',
+    label: 'Inactive',
   },
   PENDING: {
     icon: ClockIcon,
-    color: "text-yellow-500",
-    label: "Pending",
+    color: 'text-yellow-500',
+    label: 'Pending',
   },
   DEACTIVATED: {
     icon: XCircleIcon,
-    color: "text-grey-400",
-    label: "Deactivated",
+    color: 'text-grey-400',
+    label: 'Deactivated',
   },
   CLOSED: {
     icon: XCircleIcon,
-    color: "text-red-500",
-    label: "Closed",
+    color: 'text-red-500',
+    label: 'Closed',
   },
   HOLD: {
     icon: ClockIcon,
-    color: "text-blue-500",
-    label: "Hold",
+    color: 'text-blue-500',
+    label: 'Hold',
   },
   SUSPENDED: {
     icon: XCircleIcon,
-    color: "text-red-600",
-    label: "Suspended",
+    color: 'text-red-600',
+    label: 'Suspended',
   },
 };
 
@@ -57,19 +57,19 @@ interface StatusIconProps {
 }
 
 export const statusTextColorMap: Record<string, string> = {
-  ACTIVE: "text-green-600",
-  INACTIVE: "text-yellow-600",
-  PENDING: "text-yellow-600",
-  DEACTIVATED: "text-red-400",
-  CLOSED: "text-gray-600",
-  HOLD: "text-blue-600",
-  SUSPENDED: "text-red-700",
+  ACTIVE: 'text-green-600',
+  INACTIVE: 'text-yellow-600',
+  PENDING: 'text-yellow-600',
+  DEACTIVATED: 'text-red-400',
+  CLOSED: 'text-gray-600',
+  HOLD: 'text-blue-600',
+  SUSPENDED: 'text-red-700',
 };
 
 export default function StatusIcon({
   status,
   configMap = STATUS_MAP,
-  className = "h-5 w-5",
+  className = 'h-5 w-5',
 }: StatusIconProps) {
   const config = configMap[status.toUpperCase()];
 

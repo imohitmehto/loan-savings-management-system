@@ -1,7 +1,7 @@
-"use client";
-import { SessionProvider } from "next-auth/react";
-import React from "react";
-import { Session } from "next-auth";
+'use client';
+import { SessionProvider } from 'next-auth/react';
+import React from 'react';
+import { Session } from 'next-auth';
 
 /**
  * SessionWrapper wraps the application with NextAuth's SessionProvider

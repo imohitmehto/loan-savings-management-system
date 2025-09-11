@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import api from "@/lib/api/axiosInstance";
-import { Loan } from "@/types/Loan";
-import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
+import api from '@/lib/api/axiosInstance';
+import { Loan } from '@/types/Loan';
+import { ApiError, safeApiCall, apiLog } from './helpers/apiHelpers';
 
 /**
  * ============================================================
@@ -24,8 +24,8 @@ import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
  */
 export const createLoan = (formData: FormData) =>
   safeApiCall(async () => {
-    apiLog("Creating new loan...");
-    const { data } = await api.post("/loan/create", formData);
+    apiLog('Creating new loan...');
+    const { data } = await api.post('/loan/create', formData);
     return data;
   });
 
@@ -39,10 +39,10 @@ export const createLoan = (formData: FormData) =>
  */
 export const fetchAllLoans = (): Promise<Loan[]> =>
   safeApiCall(async () => {
-    apiLog("Fetching all loans...");
-    const { data } = await api.get<Loan[]>("/loan/get");
+    apiLog('Fetching all loans...');
+    const { data } = await api.get<Loan[]>('/loan/get');
     if (!Array.isArray(data)) {
-      throw new ApiError("Invalid data format received from API", 500);
+      throw new ApiError('Invalid data format received from API', 500);
     }
     return data;
   });
@@ -60,7 +60,7 @@ export const fetchLoanById = (id: string): Promise<Loan> =>
   safeApiCall(async () => {
     apiLog(`Fetching loan ID: ${id}`);
     const { data } = await api.get<Loan>(`/loan/get/${id}`);
-    if (!data) throw new ApiError("Loan not found", 404);
+    if (!data) throw new ApiError('Loan not found', 404);
     return data;
   });
 

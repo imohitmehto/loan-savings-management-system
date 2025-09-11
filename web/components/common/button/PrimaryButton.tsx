@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 interface PrimaryButtonProps {
   label: string;
   onClick?: () => void;
-  type?: "button" | "submit" | "reset";
+  type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
   ariaLabel?: string;
   className?: string;
@@ -12,10 +12,10 @@ interface PrimaryButtonProps {
 export default function PrimaryButton({
   label,
   onClick,
-  type = "button",
+  type = 'button',
   disabled = false,
   ariaLabel,
-  className = "",
+  className = '',
 }: PrimaryButtonProps) {
   return (
     <button
@@ -24,7 +24,7 @@ export default function PrimaryButton({
       disabled={disabled}
       aria-label={ariaLabel ?? label}
       className={`px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-bold
-        ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}`}
     >
       {label}

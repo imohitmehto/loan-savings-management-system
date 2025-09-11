@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { useForm } from "react-hook-form";
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   RegistrationInput,
   registrationSchema,
-} from "@/validators/registerSchema";
-import InputField from "@/components/auth/InputField";
-import Image from "next/image";
-import Logo from "@/public/images/logo.png";
-import { useRouter } from "next/navigation";
-import api from "@/lib/api/axiosInstance";
+} from '@/validators/registerSchema';
+import InputField from '@/components/auth/InputField';
+import Image from 'next/image';
+import Logo from '@/public/images/logo.png';
+import { useRouter } from 'next/navigation';
+import api from '@/lib/api/axiosInstance';
 
 export default function RegisterPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useState('');
 
   const {
     register,
@@ -29,34 +29,34 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegistrationInput) => {
     setLoading(true);
-    setServerError("");
+    setServerError('');
 
     try {
       const payload = {
         ...data,
-        phone: data.phone.startsWith("+91") ? data.phone : `+91${data.phone}`,
+        phone: data.phone.startsWith('+91') ? data.phone : `+91${data.phone}`,
       };
 
-      const res = await api.post("/auth/register", payload);
+      const res = await api.post('/auth/register', payload);
 
       if (res.status === 200) {
-        router.push("/verify-otp");
+        router.push('/verify-otp');
       } else {
-        throw new Error(res.data?.message || "Something went wrong");
+        throw new Error(res.data?.message || 'Something went wrong');
       }
     } catch (error: unknown) {
-      if (typeof error === "object" && error !== null && "response" in error) {
+      if (typeof error === 'object' && error !== null && 'response' in error) {
         const err = error as {
           response?: { data?: { message?: string } };
           message?: string;
         };
         setServerError(
-          err.response?.data?.message || err.message || "Something went wrong",
+          err.response?.data?.message || err.message || 'Something went wrong'
         );
       } else if (error instanceof Error) {
         setServerError(error.message);
       } else {
-        setServerError("Something went wrong");
+        setServerError('Something went wrong');
       }
     } finally {
       setLoading(false);
@@ -84,7 +84,7 @@ export default function RegisterPage() {
           type="text"
           icon="user"
           error={errors.name?.message}
-          {...register("name")}
+          {...register('name')}
         />
 
         <InputField
@@ -93,7 +93,7 @@ export default function RegisterPage() {
           type="email"
           icon="envelope"
           error={errors.email?.message}
-          {...register("email")}
+          {...register('email')}
         />
 
         <InputField
@@ -102,7 +102,7 @@ export default function RegisterPage() {
           type="tel"
           icon="phone"
           error={errors.phone?.message}
-          {...register("phone")}
+          {...register('phone')}
         />
 
         <InputField
@@ -111,7 +111,7 @@ export default function RegisterPage() {
           type="password"
           icon="lock"
           error={errors.password?.message}
-          {...register("password")}
+          {...register('password')}
         />
 
         {serverError && (
@@ -123,12 +123,12 @@ export default function RegisterPage() {
           className="w-full bg-blue-900 hover:bg-blue-700 text-white py-2 rounded transition font-semibold tracking-wide mt-4"
           disabled={loading}
         >
-          {loading ? "Registering..." : "REGISTER"}
+          {loading ? 'Registering...' : 'REGISTER'}
         </button>
       </form>
 
       <footer className="absolute bottom-4 text-xs text-gray-300">
-        Developed by{" "}
+        Developed by{' '}
         <a href="#" className="hover:text-white">
           Mohit Mehto 🤍
         </a>

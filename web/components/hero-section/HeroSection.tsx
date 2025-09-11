@@ -1,5 +1,5 @@
-"use client";
-import HeroContent from "./HeroContent";
+'use client';
+import HeroContent from './HeroContent';
 
 export default function HeroSection() {
   return (

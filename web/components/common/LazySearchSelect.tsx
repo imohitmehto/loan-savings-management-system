@@ -1,6 +1,6 @@
 // components/common/LazySearchSelect.tsx
-"use client";
-import React, { useEffect, useRef, useState } from "react";
+'use client';
+import React, { useEffect, useRef, useState } from 'react';
 
 export interface OptionType {
   value: string;
@@ -14,7 +14,7 @@ interface LazySearchSelectProps {
   onRemove: (option: OptionType) => void;
   onSearch: (
     query: string,
-    page: number,
+    page: number
   ) => Promise<{ options: OptionType[]; hasMore: boolean }>;
   placeholder?: string;
   label?: string;
@@ -26,12 +26,12 @@ export default function LazySearchSelect({
   onSelect,
   onRemove,
   onSearch,
-  placeholder = "Search...",
+  placeholder = 'Search...',
   label,
   disabled = false,
 }: LazySearchSelectProps) {
   const [dropOpen, setDropOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [options, setOptions] = useState<OptionType[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -61,8 +61,8 @@ export default function LazySearchSelect({
         setDropOpen(false);
       }
     }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
   }, [dropOpen]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,11 +76,11 @@ export default function LazySearchSelect({
         className={
           `flex flex-wrap items-center min-h-[44px] border rounded-md bg-gray-50 px-2 py-2 cursor-pointer` +
           (dropOpen
-            ? " border-blue-400 ring-2 ring-blue-200"
-            : " border-gray-300")
+            ? ' border-blue-400 ring-2 ring-blue-200'
+            : ' border-gray-300')
         }
         onClick={() => {
-          if (!disabled) setDropOpen((v) => !v);
+          if (!disabled) setDropOpen(v => !v);
         }}
         tabIndex={0}
         aria-haspopup="listbox"
@@ -89,7 +89,7 @@ export default function LazySearchSelect({
         {selected.length === 0 ? (
           <span className="text-gray-400 ml-1">{placeholder}</span>
         ) : (
-          selected.map((o) => (
+          selected.map(o => (
             <span
               key={o.value}
               className="flex items-center bg-blue-100 text-blue-800 rounded-full px-3 py-1 mr-2 mb-1 text-sm"
@@ -99,7 +99,7 @@ export default function LazySearchSelect({
                 disabled={disabled}
                 type="button"
                 className="ml-1 text-lg text-blue-400 hover:text-red-500 focus:outline-none"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   onRemove(o);
                 }}
@@ -132,7 +132,7 @@ export default function LazySearchSelect({
                 No matching items.
               </div>
             )}
-            {options.map((o) => (
+            {options.map(o => (
               <button
                 disabled={disabled}
                 type="button"
@@ -140,7 +140,7 @@ export default function LazySearchSelect({
                 className="flex w-full text-left px-3 py-2 hover:bg-blue-50 focus:bg-blue-100 transition"
                 onClick={() => {
                   onSelect(o);
-                  setSearch("");
+                  setSearch('');
                   setPage(1);
                 }}
               >

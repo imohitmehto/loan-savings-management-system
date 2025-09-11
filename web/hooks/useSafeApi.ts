@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { safeApiCall } from "@/lib/api/helpers/apiHelpers";
+import { useState, useEffect, useCallback } from 'react';
+import { safeApiCall } from '@/lib/api/helpers/apiHelpers';
 
 /**
  * Custom hook to perform API calls using safeApiCall wrapper

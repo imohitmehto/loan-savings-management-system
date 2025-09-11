@@ -1,10 +1,10 @@
-"use client";
-import useSWR from "swr";
-import { Session } from "next-auth";
+'use client';
+import useSWR from 'swr';
+import { Session } from 'next-auth';
 
 const fetcher = async (url: string): Promise<Session> => {
-  const res = await fetch(url, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch session");
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) throw new Error('Failed to fetch session');
   return res.json();
 };
 
@@ -14,16 +14,18 @@ const fetcher = async (url: string): Promise<Session> => {
  */
 export function useSessionSWR() {
   const { data, error, mutate, isLoading } = useSWR<Session>(
-    "/api/auth/session",
+    '/api/auth/session',
     fetcher,
     {
-      revalidateOnFocus: false,       // Don't revalidate on window focus
-      revalidateOnReconnect: false,   // Don't revalidate on reconnect
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      revalidateOnReconnect: false, // Don't revalidate on reconnect
       dedupingInterval: 5 * 60 * 1000, // 5-minute deduplication window
-      errorRetryCount: 1,             // Only retry once on error
-      shouldRetryOnError: (error) => {
-        return !error?.message?.includes('401') && !error?.message?.includes('403');
-      }
+      errorRetryCount: 1, // Only retry once on error
+      shouldRetryOnError: error => {
+        return (
+          !error?.message?.includes('401') && !error?.message?.includes('403')
+        );
+      },
     }
   );
 
@@ -32,6 +34,6 @@ export function useSessionSWR() {
     isLoading,
     isError: !!error,
     refresh: mutate,
-    error
+    error,
   };
 }

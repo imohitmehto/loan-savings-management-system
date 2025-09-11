@@ -1,15 +1,15 @@
-"Use Client";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Logo from "@/public/images/logo.png";
-import { loginSchema } from "@/validators/loginSchema";
-import InputField from "@/components/auth/InputField";
-import { signIn } from "next-auth/react";
-import Link from "next/link";
-import { z } from "zod";
+'Use Client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Logo from '@/public/images/logo.png';
+import { loginSchema } from '@/validators/loginSchema';
+import InputField from '@/components/auth/InputField';
+import { signIn } from 'next-auth/react';
+import Link from 'next/link';
+import { z } from 'zod';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -24,40 +24,40 @@ export default function LoginForm() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
-    setServerError("");
+    setServerError('');
 
     try {
       if (!data.userName || !data.password) {
-        setServerError("Username and password are required");
+        setServerError('Username and password are required');
         return;
       }
 
-      const res = await signIn("credentials", {
+      const res = await signIn('credentials', {
         redirect: false,
         userName: data.userName,
         password: data.password,
         rememberMe,
-        callbackUrl: "/home",
+        callbackUrl: '/home',
       });
 
       if (res?.error) {
-        console.error("Login failed:", res.error);
-        setServerError("Invalid username or password.");
+        console.error('Login failed:', res.error);
+        setServerError('Invalid username or password.');
         return;
       }
 
-      const redirectUrl = res?.url || "/home";
+      const redirectUrl = res?.url || '/home';
       router.push(redirectUrl);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setServerError(err.message);
       } else {
-        setServerError("An unexpected error occurred.");
+        setServerError('An unexpected error occurred.');
       }
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export default function LoginForm() {
         type="text"
         icon="user"
         error={errors.userName?.message}
-        {...register("userName")}
+        {...register('userName')}
       />
       <InputField
         label="Password"
@@ -89,7 +89,7 @@ export default function LoginForm() {
         type="password"
         icon="lock"
         error={errors.password?.message}
-        {...register("password")}
+        {...register('password')}
       />
 
       {serverError && (
@@ -119,7 +119,7 @@ export default function LoginForm() {
         disabled={loading}
         className="w-full bg-blue-900 hover:bg-blue-700 text-white py-2 rounded transition font-semibold tracking-wide"
       >
-        {loading ? "Logging in..." : "LOGIN"}
+        {loading ? 'Logging in...' : 'LOGIN'}
       </button>
     </form>
   );

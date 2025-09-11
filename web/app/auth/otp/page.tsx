@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import OtpForm from "@/components/auth/OtpForm";
+import OtpForm from '@/components/auth/OtpForm';
 
 export default function OtpPage() {
   return (
@@ -10,7 +10,7 @@ export default function OtpPage() {
     >
       <OtpForm />
       <footer className="absolute bottom-4 text-xs text-gray-300">
-        Developed by{" "}
+        Developed by{' '}
         <a href="#" className="hover:text-white">
           Mohit Mehto 🤍
         </a>

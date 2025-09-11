@@ -1,35 +1,35 @@
 // Transaction reason/type categories
 export enum TransactionType {
-  MONTHLY_PAYMENT = "MONTHLY_PAYMENT",
-  DEBIT = "DEBIT",
-  LOAN_REPAYMENT = "LOAN_REPAYMENT",
-  LOAN_DEBIT = "LOAN_DEBIT",
-  PENALTY = "PENALTY",
-  CASH_TO_BANK = "CASH_TO_BANK",
-  BANK_TO_CASH = "BANK_TO_CASH",
-  BANK_TO_FD = "BANK_TO_FD",
-  EXPENSE = "EXPENSE",
+  MONTHLY_PAYMENT = 'MONTHLY_PAYMENT',
+  DEBIT = 'DEBIT',
+  LOAN_REPAYMENT = 'LOAN_REPAYMENT',
+  LOAN_DEBIT = 'LOAN_DEBIT',
+  PENALTY = 'PENALTY',
+  CASH_TO_BANK = 'CASH_TO_BANK',
+  BANK_TO_CASH = 'BANK_TO_CASH',
+  BANK_TO_FD = 'BANK_TO_FD',
+  EXPENSE = 'EXPENSE',
 }
 
 // Credit or debit direction
 export enum TransactionDirection {
-  CREDIT = "CREDIT",
-  DEBIT = "DEBIT",
+  CREDIT = 'CREDIT',
+  DEBIT = 'DEBIT',
 }
 
 // Payment methods
 export enum PaymentMode {
-  UPI = "UPI",
-  CASH = "CASH",
-  BANK_TRANSFER = "BANK_TRANSFER",
-  CHEQUE = "CHEQUE",
+  UPI = 'UPI',
+  CASH = 'CASH',
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  CHEQUE = 'CHEQUE',
 }
 
 // Transaction approval or lifecycle state
 export enum TransactionStatus {
-  PENDING = "PENDING",
-  APPROVED = "APPROVED",
-  REJECTED = "REJECTED",
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
 }
 
 export interface Transaction {

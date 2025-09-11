@@ -1,5 +1,5 @@
-"use client";
-import { useEffect, useState, useCallback } from "react";
+'use client';
+import { useEffect, useState, useCallback } from 'react';
 import {
   FiGrid,
   FiUser,
@@ -9,79 +9,78 @@ import {
   FiCalendar,
   FiMenu,
   FiX,
-} from "react-icons/fi";
-import { FaMoneyBillTransfer, FaNoteSticky } from "react-icons/fa6";
-import { GiPayMoney } from "react-icons/gi";
-import { NavItem } from "./NavItems";
-import { ProfileSection } from "./profile/ProfileSection";
-import { NotificationsDropdown, NotesDropdown } from "./dropdown/Dropdowns";
-import CalendarDropdown from "./dropdown/CalendarDropdown";
-import { MobileMenu } from "./MobileMenu";
+} from 'react-icons/fi';
+import { FaMoneyBillTransfer, FaNoteSticky } from 'react-icons/fa6';
+import { GiPayMoney } from 'react-icons/gi';
+import { NavItem } from './NavItems';
+import { ProfileSection } from './profile/ProfileSection';
+import { NotificationsDropdown, NotesDropdown } from './dropdown/Dropdowns';
+import { MobileMenu } from './MobileMenu';
 
 export default function TopBar() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<
-    null | "notifications" | "calendar" | "notes"
+    null | 'notifications' | 'calendar' | 'notes'
   >(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   /** Responsive device check (runs client-side only) */
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   /** Menu items config */
   const submenus = {
     account: [
-      { label: "All Accounts", href: "/account" },
-      { label: "New Account", href: "/account/new" },
-      { label: "All Account Groups", href: "/account/group" },
-      { label: "New Account Group", href: "/account/group/new" },
+      { label: 'All Accounts', href: '/account' },
+      { label: 'New Account', href: '/account/new' },
+      { label: 'All Account Groups', href: '/account/group' },
+      { label: 'New Account Group', href: '/account/group/new' },
     ],
     transaction: [
-      { label: "All Transactions", href: "/transaction" },
-      { label: "New Transaction", href: "/transaction/new" },
-      { label: "All Expenses", href: "/transaction/expenses" },
-      { label: "All Monthly Pending", href: "/transaction/monthly-pending" },
+      { label: 'All Transactions', href: '/transaction' },
+      { label: 'New Transaction', href: '/transaction/new' },
+      { label: 'All Expenses', href: '/transaction/expenses' },
+      { label: 'All Monthly Pending', href: '/transaction/monthly-pending' },
     ],
     loan: [
-      { label: "All Loans", href: "/loans" },
-      { label: "Apply for Loan", href: "/loans/apply" },
-      { label: "All Loan Policies", href: "/loans/policies" },
-      { label: "New Loan Policy", href: "/loans/policies/new" },
-      { label: "Loan Calculator", href: "/loans/calculator" },
+      { label: 'All Loans', href: '/loans' },
+      { label: 'Apply for Loan', href: '/loans/apply' },
+      { label: 'All Loan Policies', href: '/loans/policies' },
+      { label: 'New Loan Policy', href: '/loans/policies/new' },
+      { label: 'Loan Calculator', href: '/loans/calculator' },
     ],
     reports: [
-      { label: "Financial Reports", href: "/reports" },
-      { label: "Transaction Reports", href: "/reports/" },
-      { label: "Loan Reports", href: "/reports/loans" },
-      { label: "Monthly Summary", href: "/reports/monthly" },
-      { label: "Annual Reports", href: "/reports/annual" },
-      { label: "Custom Reports", href: "/reports/custom" },
+      { label: 'Financial Reports', href: '/reports' },
+      { label: 'Transaction Reports', href: '/reports/' },
+      { label: 'Loan Reports', href: '/reports/loans' },
+      { label: 'Monthly Summary', href: '/reports/monthly' },
+      { label: 'Annual Reports', href: '/reports/annual' },
+      { label: 'Custom Reports', href: '/reports/custom' },
     ],
   };
 
   const navItems = [
-    { label: "Home", icon: <FiHome />, href: "/home" },
-    { label: "Dashboard", icon: <FiGrid />, href: "/dashboard" },
-    { label: "Account", icon: <FiUser />, submenu: submenus.account },
+    { label: 'Home', icon: <FiHome />, href: '/home' },
+    { label: 'Dashboard', icon: <FiGrid />, href: '/dashboard' },
+    { label: 'Account', icon: <FiUser />, submenu: submenus.account },
     {
-      label: "Transaction",
+      label: 'Transaction',
       icon: <FaMoneyBillTransfer />,
       submenu: submenus.transaction,
     },
-    { label: "Loans", icon: <GiPayMoney />, submenu: submenus.loan },
-    { label: "Reports", icon: <FiBarChart2 />, submenu: submenus.reports },
+    { label: 'Loans', icon: <GiPayMoney />, submenu: submenus.loan },
+    { label: 'Reports', icon: <FiBarChart2 />, submenu: submenus.reports },
   ];
 
   /** Mobile menu handlers */
   const handleMobileMenuToggle = useCallback(() => {
-    setMobileMenuOpen((v) => !v);
+    setMobileMenuOpen(v => !v);
   }, []);
 
   const closeMobileMenu = useCallback(() => {
@@ -136,7 +135,7 @@ export default function TopBar() {
                 {/* Notifications */}
                 <div
                   className="relative"
-                  onMouseEnter={() => setDropdownOpen("notifications")}
+                  onMouseEnter={() => setDropdownOpen('notifications')}
                   onMouseLeave={() => setDropdownOpen(null)}
                 >
                   <button className="relative p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 group">
@@ -145,33 +144,33 @@ export default function TopBar() {
                       <span className="text-[8px] font-bold text-white">3</span>
                     </div>
                   </button>
-                  {dropdownOpen === "notifications" && (
+                  {dropdownOpen === 'notifications' && (
                     <NotificationsDropdown />
                   )}
                 </div>
 
                 {/* Calendar */}
-                <div
+                {/* <div
                   className="relative"
-                  onMouseEnter={() => setDropdownOpen("calendar")}
+                  onMouseEnter={() => setDropdownOpen('calendar')}
                   onMouseLeave={() => setDropdownOpen(null)}
                 >
                   <button className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 group">
                     <FiCalendar className="text-lg group-hover:text-blue-400 transition-colors duration-200" />
                   </button>
-                  {dropdownOpen === "calendar" && <CalendarDropdown />}
-                </div>
+                  {dropdownOpen === 'calendar' && <CalendarDropdown />}
+                </div> */}
 
                 {/* Notes */}
                 <div
                   className="relative"
-                  onMouseEnter={() => setDropdownOpen("notes")}
+                  onMouseEnter={() => setDropdownOpen('notes')}
                   onMouseLeave={() => setDropdownOpen(null)}
                 >
                   <button className="p-2 hover:bg-slate-700/50 rounded-lg transition-all duration-200 group">
                     <FaNoteSticky className="text-lg group-hover:text-blue-400 transition-colors duration-200" />
                   </button>
-                  {dropdownOpen === "notes" && <NotesDropdown />}
+                  {dropdownOpen === 'notes' && <NotesDropdown />}
                 </div>
               </div>
               <div className="flex items-center space-x-3 pl-3 border-l border-slate-600/50">

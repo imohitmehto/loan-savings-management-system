@@ -1,5 +1,5 @@
-"use client";
-import React from "react";
+'use client';
+import React from 'react';
 
 interface GenericTableProps<T> {
   columns: { label: string; className?: string }[];
@@ -21,7 +21,7 @@ export default function GenericTable<T>({
               <th
                 key={idx}
                 className={`text-left text-gray-600 font-semibold py-3 px-4 text-xs sm:text-sm tracking-wide ${
-                  col.className || ""
+                  col.className || ''
                 }`}
               >
                 {col.label}

@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
 const highlights = [
   {
-    title: "For Our Community, By Our Community",
-    desc: "Exclusively designed for Sanskar Malvi Swarnkar families—ensuring trust and cultural belonging.",
+    title: 'For Our Community, By Our Community',
+    desc: 'Exclusively designed for Sanskar Malvi Swarnkar families—ensuring trust and cultural belonging.',
   },
   {
-    title: "Secure & Transparent",
-    desc: "Every member can track savings and loans—no hidden terms, no outside influence.",
+    title: 'Secure & Transparent',
+    desc: 'Every member can track savings and loans—no hidden terms, no outside influence.',
   },
   {
-    title: "Strengthening Bonds Beyond Finance",
-    desc: "It’s about helping each other prosper, just like family.",
+    title: 'Strengthening Bonds Beyond Finance',
+    desc: 'It’s about helping each other prosper, just like family.',
   },
 ];
 

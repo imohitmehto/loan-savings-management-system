@@ -1,50 +1,50 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Logo from "@/public/images/logo.png";
-import api from "@/lib/api/axiosInstance";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Logo from '@/public/images/logo.png';
+import api from '@/lib/api/axiosInstance';
 
 export default function VerifyOtpPage() {
   const router = useRouter();
-  const [otp, setOtp] = useState("");
-  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const handleVerify = async () => {
     setLoading(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     try {
-      const res = await api.post("/auth/verify-otp", {
+      const res = await api.post('/auth/verify-otp', {
         email,
         otp,
       });
 
       setMessage(res.data.message);
-      router.push("/auth/login");
+      router.push('/auth/login');
     } catch (err: unknown) {
       if (
         err &&
-        typeof err === "object" &&
-        "response" in err &&
+        typeof err === 'object' &&
+        'response' in err &&
         err.response &&
-        typeof err.response === "object" &&
-        "data" in err.response &&
+        typeof err.response === 'object' &&
+        'data' in err.response &&
         err.response.data &&
-        typeof err.response.data === "object" &&
-        "message" in err.response.data
+        typeof err.response.data === 'object' &&
+        'message' in err.response.data
       ) {
         setError(
           (err as { response: { data: { message: string } } }).response.data
-            .message || "OTP verification failed",
+            .message || 'OTP verification failed'
         );
       } else {
-        setError("OTP verification failed");
+        setError('OTP verification failed');
       }
     } finally {
       setLoading(false);
@@ -53,30 +53,30 @@ export default function VerifyOtpPage() {
 
   const handleResend = async () => {
     setLoading(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     try {
-      const res = await api.post("/auth/send-otp", { email });
-      setMessage(res.data.message || "OTP sent successfully");
+      const res = await api.post('/auth/send-otp', { email });
+      setMessage(res.data.message || 'OTP sent successfully');
     } catch (err: unknown) {
       if (
         err &&
-        typeof err === "object" &&
-        "response" in err &&
+        typeof err === 'object' &&
+        'response' in err &&
         err.response &&
-        typeof err.response === "object" &&
-        "data" in err.response &&
+        typeof err.response === 'object' &&
+        'data' in err.response &&
         err.response.data &&
-        typeof err.response.data === "object" &&
-        "message" in err.response.data
+        typeof err.response.data === 'object' &&
+        'message' in err.response.data
       ) {
         setError(
           (err as { response: { data: { message: string } } }).response.data
-            .message || "Failed to resend OTP",
+            .message || 'Failed to resend OTP'
         );
       } else {
-        setError("Failed to resend OTP");
+        setError('Failed to resend OTP');
       }
     } finally {
       setLoading(false);
@@ -100,7 +100,7 @@ export default function VerifyOtpPage() {
           placeholder="Enter 6-digit OTP"
           maxLength={6}
           value={otp}
-          onChange={(e) => setOtp(e.target.value)}
+          onChange={e => setOtp(e.target.value)}
           className="w-full px-4 py-2 rounded-md border text-black focus:outline-none mb-4"
         />
 
@@ -108,7 +108,7 @@ export default function VerifyOtpPage() {
           type="email"
           placeholder="Enter your email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           className="w-full px-4 py-2 rounded-md border text-black focus:outline-none mb-4"
         />
 
@@ -124,11 +124,11 @@ export default function VerifyOtpPage() {
           className="w-full bg-blue-900 hover:bg-blue-700 text-white py-2 rounded transition font-semibold tracking-wide"
           disabled={loading}
         >
-          {loading ? "Verifying..." : "VERIFY OTP"}
+          {loading ? 'Verifying...' : 'VERIFY OTP'}
         </button>
 
         <div className="text-center text-sm mt-4">
-          Didn&apos;t receive OTP?{" "}
+          Didn&apos;t receive OTP?{' '}
           <span
             onClick={handleResend}
             className="text-blue-300 hover:underline cursor-pointer"
@@ -139,7 +139,7 @@ export default function VerifyOtpPage() {
       </div>
 
       <footer className="absolute bottom-4 text-xs text-gray-300">
-        Developed by{" "}
+        Developed by{' '}
         <a href="#" className="hover:text-white">
           Mohit Mehto 🤍
         </a>

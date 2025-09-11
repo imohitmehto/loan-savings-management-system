@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 export function useFetchData<T>(apiCall: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -9,13 +9,13 @@ export function useFetchData<T>(apiCall: () => Promise<T>) {
     setLoading(true);
 
     apiCall()
-      .then((res) => {
+      .then(res => {
         if (mounted) setData(res);
       })
-      .catch((err) => {
+      .catch(err => {
         if (mounted) {
-          console.error("Data fetching error", err);
-          setError("Failed to load data.");
+          console.error('Data fetching error', err);
+          setError('Failed to load data.');
           setData(null); // fallback to null/empty state
         }
       })

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { fetchProfile } from "@/lib/api/user";
+import { useState, useEffect } from 'react';
+import { fetchProfile } from '@/lib/api/user';
 
 export interface ProfileData {
   name: string;
@@ -19,7 +19,7 @@ export const useProfile = (): ProfileData => {
       try {
         const data = await fetchProfile();
         setAvatarUrl(data?.account?.photo);
-        setName(data?.firstName + " " + data?.lastName);
+        setName(data?.firstName + ' ' + data?.lastName);
         setRole(data?.role);
       } catch {
         setAvatarUrl(undefined);
@@ -32,8 +32,8 @@ export const useProfile = (): ProfileData => {
   }, []);
 
   return {
-    name: name ?? "User",
-    role: role ?? "Guest",
+    name: name ?? 'User',
+    role: role ?? 'Guest',
     avatarUrl,
   };
 };

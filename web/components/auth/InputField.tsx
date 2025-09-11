@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useState } from 'react';
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string; // Descriptive label for accessibility
-  icon?: "user" | "lock" | "envelope" | "phone"; // Optional FontAwesome icon
+  icon?: 'user' | 'lock' | 'envelope' | 'phone'; // Optional FontAwesome icon
   error?: string; // Optional field-level error message
 }
 
@@ -21,7 +21,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
   ({ label, icon, error, type, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
 
-    const inputType = type === "password" && showPassword ? "text" : type;
+    const inputType = type === 'password' && showPassword ? 'text' : type;
 
     return (
       <div className="mb-4 relative">
@@ -43,19 +43,19 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           aria-invalid={!!error}
           aria-describedby={error ? `${props.name}-error` : undefined}
           className={`w-full pl-10 pr-10 py-2 bg-white/40 text-black placeholder-gray-200 border rounded focus:outline-none focus:ring-2 focus:ring-blue-700 ${
-            error ? "border-red-400 focus:ring-red-500" : "border-white/30"
+            error ? 'border-red-400 focus:ring-red-500' : 'border-white/30'
           }`}
         />
 
-        {type === "password" && (
+        {type === 'password' && (
           <button
             type="button"
             tabIndex={-1}
-            onClick={() => setShowPassword((prev) => !prev)}
+            onClick={() => setShowPassword(prev => !prev)}
             className="absolute right-3 top-2.5 text-gray-700 bg-transparent border-0 p-0 focus:outline-none cursor-pointer"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            <i className={`fas fa-${showPassword ? "eye-slash" : "eye"}`} />
+            <i className={`fas fa-${showPassword ? 'eye-slash' : 'eye'}`} />
           </button>
         )}
 
@@ -66,8 +66,8 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
         )}
       </div>
     );
-  },
+  }
 );
 
-InputField.displayName = "InputField";
+InputField.displayName = 'InputField';
 export default InputField;

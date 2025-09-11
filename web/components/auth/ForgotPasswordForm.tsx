@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Logo from "@/public/images/logo.png";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Logo from '@/public/images/logo.png';
 import {
   ForgotPasswordInput,
   forgotPasswordSchema,
-} from "@/validators/forgotPasswordSchema";
-import InputField from "@/components/auth/InputField";
+} from '@/validators/forgotPasswordSchema';
+import InputField from '@/components/auth/InputField';
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -24,30 +24,30 @@ export default function ForgotPasswordForm() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [serverError, setServerError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const onSubmit = async (data: ForgotPasswordInput) => {
     setLoading(true);
-    setServerError("");
-    setSuccess("");
+    setServerError('');
+    setSuccess('');
     try {
       // Send both username and email to the API
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userName: data.userName, email: data.email }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
-        throw new Error(result.error || "Failed to send reset email");
+        throw new Error(result.error || 'Failed to send reset email');
       }
       setSuccess("If registered, we've sent a reset link to your email.");
     } catch (err: unknown) {
       if (err instanceof Error) {
         setServerError(err.message);
       } else {
-        setServerError("An unexpected error occurred");
+        setServerError('An unexpected error occurred');
       }
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export default function ForgotPasswordForm() {
         type="text"
         icon="user"
         error={errors.userName?.message}
-        {...register("userName")}
+        {...register('userName')}
       />
 
       <InputField
@@ -86,7 +86,7 @@ export default function ForgotPasswordForm() {
         type="email"
         icon="envelope"
         error={errors.email?.message}
-        {...register("email")}
+        {...register('email')}
       />
 
       {serverError && (
@@ -101,13 +101,13 @@ export default function ForgotPasswordForm() {
         disabled={loading}
         className="w-full bg-blue-900 hover:bg-blue-700 text-white py-2 rounded transition font-semibold tracking-wide mt-4"
       >
-        {loading ? "Sending..." : "SEND RESET LINK"}
+        {loading ? 'Sending...' : 'SEND RESET LINK'}
       </button>
 
       <div className="mt-4 text-xs text-center text-black">
         <button
           type="button"
-          onClick={() => router.push("/auth/login")}
+          onClick={() => router.push('/auth/login')}
           className="text-blue-700 hover:underline"
           disabled={loading}
         >

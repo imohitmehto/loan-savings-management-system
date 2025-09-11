@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import defaultAvatar from "@/public/images/avatar.png";
+import Image from 'next/image';
+import defaultAvatar from '@/public/images/avatar.png';
 
 interface AvatarProps {
   src?: string;
   alt?: string;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ src, alt = "User Avatar" }) => (
+export const Avatar: React.FC<AvatarProps> = ({ src, alt = 'User Avatar' }) => (
   <div className="relative">
     <Image
       src={src || defaultAvatar}

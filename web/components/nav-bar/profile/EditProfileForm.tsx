@@ -1,13 +1,13 @@
-"use client";
-import React, { useRef, useState } from "react";
-import Image from "next/image";
+'use client';
+import React, { useRef, useState } from 'react';
+import Image from 'next/image';
 
 // Mock user data (replace with fetch from server or props)
 const initialUser = {
-  avatar: "/images/avatar.png",
-  name: "Deepak Soni",
-  email: "deepak@example.com",
-  bio: "Administrator",
+  avatar: '/images/avatar.png',
+  name: 'Deepak Soni',
+  email: 'deepak@example.com',
+  bio: 'Administrator',
 };
 
 export default function EditProfileForm() {
@@ -19,16 +19,16 @@ export default function EditProfileForm() {
 
   // Handle input changes
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
   }
 
   // Handle avatar upload
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files?.[0]) {
       setAvatarFile(e.target.files[0]);
-      setForm((f) => ({
+      setForm(f => ({
         ...f,
         avatar: URL.createObjectURL(e.target.files![0]),
       }));
@@ -43,13 +43,13 @@ export default function EditProfileForm() {
 
     // Example validation
     if (!form.name.trim() || !form.email.trim()) {
-      setError("Name and email are required.");
+      setError('Name and email are required.');
       return;
     }
 
     // TODO: Replace this with your API PATCH/PUT call
     setTimeout(() => {
-      setSuccess("Profile updated successfully!");
+      setSuccess('Profile updated successfully!');
     }, 1000);
   }
 

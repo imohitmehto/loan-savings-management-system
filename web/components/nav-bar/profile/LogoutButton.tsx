@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { FiLogOut } from "react-icons/fi";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
+import { FiLogOut } from 'react-icons/fi';
 
 /**
  * LogoutButton handles user sign-out via next-auth.
@@ -21,10 +21,10 @@ export function LogoutButton() {
     try {
       signOut({
         redirect: true,
-        callbackUrl: "/",
+        callbackUrl: '/',
       });
     } catch (err) {
-      setError("Logout failed. Please try again.");
+      setError('Logout failed. Please try again.');
       setLoading(false);
     }
   };
@@ -38,7 +38,7 @@ export function LogoutButton() {
         aria-disabled={loading}
       >
         <FiLogOut className="text-lg" />
-        {loading ? "Logging out..." : "Logout"}
+        {loading ? 'Logging out...' : 'Logout'}
       </button>
       {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
     </div>

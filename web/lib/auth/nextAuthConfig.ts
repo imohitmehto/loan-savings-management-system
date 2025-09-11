@@ -1,24 +1,24 @@
-import CredentialsProvider from "next-auth/providers/credentials";
-import type { NextAuthOptions } from "next-auth";
-import { authorizeUser, refreshAccessToken } from "./authHelpers";
+import CredentialsProvider from 'next-auth/providers/credentials';
+import type { NextAuthOptions } from 'next-auth';
+import { authorizeUser, refreshAccessToken } from './authHelpers';
 
 export const nextAuthConfig: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        userName: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-        rememberMe: { label: "Remember Me", type: "checkbox" },
+        userName: { label: 'Username', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+        rememberMe: { label: 'Remember Me', type: 'checkbox' },
       },
       authorize: authorizeUser,
     }),
   ],
 
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 24 hours
-    updateAge: 5 * 60,    // Update session every 5 minutes
+    updateAge: 5 * 60, // Update session every 5 minutes
   },
 
   callbacks: {
@@ -39,7 +39,7 @@ export const nextAuthConfig: NextAuthOptions = {
 
       // Return previous token if the access token has not expired yet
       // Add 5-minute buffer before expiry to prevent edge cases
-      if (Date.now() < token.accessTokenExpires - 5 * 60 * 1000) {
+      if (Date.now() < Number(token.accessTokenExpires) - 5 * 60 * 1000) {
         return token;
       }
 
@@ -48,10 +48,10 @@ export const nextAuthConfig: NextAuthOptions = {
         const refreshedToken = await refreshAccessToken(token);
         return refreshedToken;
       } catch (error) {
-        console.error("Token refresh failed:", error);
+        console.error('Token refresh failed:', error);
         return {
           ...token,
-          error: "RefreshAccessTokenError",
+          error: 'RefreshAccessTokenError',
         };
       }
     },
@@ -63,15 +63,14 @@ export const nextAuthConfig: NextAuthOptions = {
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
         session.user.rememberMe = token.rememberMe ?? false;
-        session.error = token.error;
       }
       return session;
     },
   },
 
   pages: {
-    signIn: "/auth/login",
-    error: "/auth/login",
+    signIn: '/auth/login',
+    error: '/auth/login',
   },
 
   secret: process.env.NEXTAUTH_SECRET,

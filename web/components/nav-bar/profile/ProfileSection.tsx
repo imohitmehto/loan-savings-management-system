@@ -1,15 +1,15 @@
-"use client";
-import { useState, useEffect, useRef } from "react";
-import { useProfile } from "./useProfile";
-import { Avatar } from "../../ui/Avatar";
-import { ProfileDropdown } from "./ProfileDropdown";
+'use client';
+import { useState, useEffect, useRef } from 'react';
+import { useProfile } from './useProfile';
+import { Avatar } from '../../ui/Avatar';
+import { ProfileDropdown } from './ProfileDropdown';
 
 export function ProfileSection() {
   const { name, role, avatarUrl } = useProfile();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const toggleDropdown = () => setOpen((prev) => !prev);
+  const toggleDropdown = () => setOpen(prev => !prev);
   const closeDropdown = () => setOpen(false);
 
   // 🔒 Close on outside click or ESC key
@@ -24,17 +24,17 @@ export function ProfileSection() {
     };
 
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         closeDropdown();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscKey);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscKey);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscKey);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscKey);
     };
   }, []);
 
@@ -46,8 +46,8 @@ export function ProfileSection() {
       >
         <Avatar src={avatarUrl} alt={name} />
         <div className="hidden lg:block">
-          <p className="text-sm font-semibold text-white">{name || "User"}</p>
-          <p className="text-xs text-slate-400">{role || "Guest"}</p>
+          <p className="text-sm font-semibold text-white">{name || 'User'}</p>
+          <p className="text-xs text-slate-400">{role || 'Guest'}</p>
         </div>
       </div>
 

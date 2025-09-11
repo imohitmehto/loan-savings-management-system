@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { ReactNode } from "react";
+import Link from 'next/link';
+import { ReactNode } from 'react';
 
 interface SubmenuItem {
   label: string;
@@ -60,7 +60,7 @@ export function NavItem({
             animate-in fade-in-0 zoom-in-95 duration-200
             pointer-events-auto
           "
-          style={{ marginTop: "-1px" }}
+          style={{ marginTop: '-1px' }}
         >
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-l border-t border-slate-200"></div>
           {submenu.length > 0 ? (

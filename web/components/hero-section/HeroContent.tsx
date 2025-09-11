@@ -1,4 +1,4 @@
-"use client";
+'use client';
 export default function HeroContent() {
   return (
     <header className="w-full flex flex-col items-center text-center gap-2 py-3 px-2 max-w-md mx-auto">

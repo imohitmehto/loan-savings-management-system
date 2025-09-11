@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
-import LoadingSpinner from "@/components/common/LoadingSpinner";
-import EmptyState from "@/components/common/EmptyState";
-import Pagination from "@/components/common/Pagination";
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import EmptyState from '@/components/common/EmptyState';
+import Pagination from '@/components/common/Pagination';
 
 interface GenericListProps<T> {
   fetchData: () => Promise<T[]>;
@@ -28,7 +28,7 @@ export default function GenericList<T>({
   const [error, setError] = useState<string | null>(null);
 
   // Internal filter state if no controlled props provided
-  const [internalFilterText, setInternalFilterText] = useState("");
+  const [internalFilterText, setInternalFilterText] = useState('');
   const filterText =
     controlledFilterText !== undefined
       ? controlledFilterText
@@ -48,7 +48,7 @@ export default function GenericList<T>({
         const result = await fetchData();
 
         if (!Array.isArray(result)) {
-          throw new Error("Unexpected data format received from API");
+          throw new Error('Unexpected data format received from API');
         }
 
         if (isMounted) {
@@ -56,9 +56,9 @@ export default function GenericList<T>({
           setFilteredData(result);
         }
       } catch (err) {
-        console.error("GenericList fetch error:", err);
+        console.error('GenericList fetch error:', err);
         if (isMounted) {
-          setError("Unable to load data right now. Please try again later.");
+          setError('Unable to load data right now. Please try again later.');
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -81,7 +81,7 @@ export default function GenericList<T>({
     }
 
     if (filterFunction) {
-      setFilteredData(data.filter((item) => filterFunction(item, filterText)));
+      setFilteredData(data.filter(item => filterFunction(item, filterText)));
     } else {
       setFilteredData(data);
     }
@@ -93,7 +93,7 @@ export default function GenericList<T>({
   const firstIndex = lastIndex - entriesPerPage;
   const currentItems = useMemo(
     () => filteredData.slice(firstIndex, lastIndex),
-    [filteredData, firstIndex, lastIndex],
+    [filteredData, firstIndex, lastIndex]
   );
 
   const totalPages = Math.ceil(filteredData.length / entriesPerPage);
@@ -103,11 +103,11 @@ export default function GenericList<T>({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setFilterText(e.target.value);
     },
-    [setFilterText],
+    [setFilterText]
   );
 
   const clearFilter = useCallback(() => {
-    setFilterText("");
+    setFilterText('');
   }, [setFilterText]);
 
   return (

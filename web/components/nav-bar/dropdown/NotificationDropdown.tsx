@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 interface Notification {
   id: number;
@@ -14,21 +14,21 @@ export default function NotificationDropdown() {
   useEffect(() => {
     async function fetchNotifications() {
       try {
-        const response = await fetch("/api/notifications");
-        if (!response.ok) throw new Error("Network error");
+        const response = await fetch('/api/notifications');
+        if (!response.ok) throw new Error('Network error');
 
         const data = await response.json();
         setNotifications(data);
       } catch (error) {
         // Fallback dummy data
         setNotifications([
-          { id: 1, message: "Dummy: Welcome to the dashboard!", read: false },
+          { id: 1, message: 'Dummy: Welcome to the dashboard!', read: false },
           {
             id: 2,
-            message: "Dummy: Your loan request is under review.",
+            message: 'Dummy: Your loan request is under review.',
             read: false,
           },
-          { id: 3, message: "Dummy: New savings policy added.", read: true },
+          { id: 3, message: 'Dummy: New savings policy added.', read: true },
         ]);
       }
     }
@@ -41,11 +41,11 @@ export default function NotificationDropdown() {
       <div className="p-3 border-b text-sm font-semibold">Notifications</div>
       <ul className="text-sm max-h-64 overflow-y-auto">
         {notifications.length > 0 ? (
-          notifications.map((note) => (
+          notifications.map(note => (
             <li
               key={note.id}
               className={`px-4 py-2 border-b last:border-none hover:bg-gray-100 ${
-                !note.read ? "font-medium" : "text-gray-500"
+                !note.read ? 'font-medium' : 'text-gray-500'
               }`}
             >
               {note.message}

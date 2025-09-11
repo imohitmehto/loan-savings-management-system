@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Calculates age in years from a date string.

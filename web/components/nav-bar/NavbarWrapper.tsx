@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { JSX, ReactNode, useMemo } from "react";
-import { usePathname } from "next/navigation";
-import TopBar from "@/components/nav-bar/TopBar";
+import { JSX, ReactNode, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
+import TopBar from '@/components/nav-bar/TopBar';
 
 // Define routes where the navbar should be hidden (e.g., auth pages)
 const HIDDEN_NAVBAR_ROUTES = [
-  "/auth/login",
-  "/auth/register",
-  "/auth/forgot-password",
-  "/auth/otp",
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/otp',
 ];
 
 interface NavbarWrapperProps {
@@ -31,14 +31,14 @@ export default function NavbarWrapper({
   // Memoize navbar visibility check based on current route
   const showNavbar = useMemo(
     () => !HIDDEN_NAVBAR_ROUTES.includes(pathname),
-    [pathname],
+    [pathname]
   );
 
   return (
     <>
       {showNavbar && <TopBar />}
       {/* Apply padding to offset navbar height (e.g., 64px) */}
-      <main className={`px-4 ${showNavbar ? "pt-16" : "pt-4"}`}>
+      <main className={`px-4 ${showNavbar ? 'pt-16' : 'pt-4'}`}>
         {children}
       </main>
     </>

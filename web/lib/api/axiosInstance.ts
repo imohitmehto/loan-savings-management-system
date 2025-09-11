@@ -1,10 +1,6 @@
 // lib/api/axiosInstance.ts
-import axios, {
-  AxiosError,
-  AxiosRequestConfig,
-  AxiosResponse,
-} from "axios";
-import { getSession, signOut } from "next-auth/react";
+import axios, { AxiosError, AxiosRequestConfig, AxiosRequestHeaders, AxiosResponse } from 'axios';
+import { getSession, signOut } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -26,7 +22,7 @@ const getCachedSession = async (): Promise<any> => {
   const now = Date.now();
 
   // Return cached session if still valid
-  if (sessionCache && (now - sessionCache.timestamp) < CACHE_DURATION) {
+  if (sessionCache && now - sessionCache.timestamp < CACHE_DURATION) {
     return sessionCache.session;
   }
 
@@ -40,7 +36,7 @@ const getCachedSession = async (): Promise<any> => {
   sessionCache = {
     session: null,
     timestamp: now,
-    promise: sessionPromise
+    promise: sessionPromise,
   };
 
   try {
@@ -67,22 +63,22 @@ const api = axios.create({
 
 // Request Interceptor
 api.interceptors.request.use(
-  async (config) => {
+  async config => {
     try {
       const session = await getCachedSession();
 
       if (!config.headers) {
-        config.headers = {};
+        config.headers = {} as AxiosRequestHeaders;
       }
 
       // Check for session error (token refresh failed)
-      if (session?.error === "RefreshAccessTokenError") {
+      if (session?.error === 'RefreshAccessTokenError') {
         // Clear cache and sign out
         clearSessionCache();
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
           await signOut({
-            callbackUrl: "/auth/login",
-            redirect: true
+            callbackUrl: '/auth/login',
+            redirect: true,
           });
         }
         return config;
@@ -93,22 +89,25 @@ api.interceptors.request.use(
       }
 
       // Content-Type handling
-      if (config.data && !config.headers["Content-Type"]) {
-        if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-          delete config.headers["Content-Type"];
+      if (config.data && !config.headers['Content-Type']) {
+        if (
+          typeof FormData !== 'undefined' &&
+          config.data instanceof FormData
+        ) {
+          delete config.headers['Content-Type'];
         } else if (
-          typeof URLSearchParams !== "undefined" &&
+          typeof URLSearchParams !== 'undefined' &&
           config.data instanceof URLSearchParams
         ) {
-          config.headers["Content-Type"] = "application/x-www-form-urlencoded";
+          config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         } else if (
-          typeof config.data === "object" &&
+          typeof config.data === 'object' &&
           config.data !== null &&
           !(config.data instanceof Date) &&
           !(config.data instanceof File) &&
           !(config.data instanceof Blob)
         ) {
-          config.headers["Content-Type"] = "application/json";
+          config.headers['Content-Type'] = 'application/json';
         }
       }
 
@@ -118,7 +117,7 @@ api.interceptors.request.use(
       return config;
     }
   },
-  (error) => Promise.reject(error)
+  error => Promise.reject(error)
 );
 
 // Response Interceptor
@@ -136,11 +135,14 @@ api.interceptors.response.use(
         const session = await getCachedSession();
 
         // Check if session has refresh error or no access token
-        if (!session?.accessToken || session?.error === "RefreshAccessTokenError") {
-          if (typeof window !== "undefined") {
+        if (
+          !session?.accessToken ||
+          session?.error === 'RefreshAccessTokenError'
+        ) {
+          if (typeof window !== 'undefined') {
             await signOut({
-              callbackUrl: "/auth/login",
-              redirect: true
+              callbackUrl: '/auth/login',
+              redirect: true,
             });
           }
           return Promise.reject(error);
@@ -152,12 +154,15 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (sessionError) {
-        console.error('❌ Session refresh failed during 401 handling:', sessionError);
+        console.error(
+          '❌ Session refresh failed during 401 handling:',
+          sessionError
+        );
 
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
           await signOut({
-            callbackUrl: "/auth/login",
-            redirect: true
+            callbackUrl: '/auth/login',
+            redirect: true,
           });
         }
       }

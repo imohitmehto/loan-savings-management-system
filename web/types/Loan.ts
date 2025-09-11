@@ -1,8 +1,8 @@
 export enum LoanStatus {
-  ACTIVE = "ACTIVE",
-  CLOSED = "CLOSED",
-  DEFAULTED = "DEFAULTED",
-  PENDING = "PENDING",
+  ACTIVE = 'ACTIVE',
+  CLOSED = 'CLOSED',
+  DEFAULTED = 'DEFAULTED',
+  PENDING = 'PENDING',
 }
 
 export interface Loan {

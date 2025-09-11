@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { FiSettings, FiLogOut } from "react-icons/fi";
-import { FaUserEdit } from "react-icons/fa";
-import { LogoutButton } from "./LogoutButton";
+import Link from 'next/link';
+import { FiSettings, FiLogOut } from 'react-icons/fi';
+import { FaUserEdit } from 'react-icons/fa';
+import { LogoutButton } from './LogoutButton';
 
 export const ProfileDropdown = () => {
   return (

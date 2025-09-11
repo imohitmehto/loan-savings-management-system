@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 interface GenericTableRowProps {
   index: number;
@@ -17,13 +17,13 @@ export default function GenericTableRow({
     <tr
       onClick={onClick}
       className={`${
-        index % 2 === 0 ? "bg-white" : "bg-gray-50"
+        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
       } hover:bg-blue-50 cursor-default transition-colors duration-150`}
     >
       {cells.map((cell, i) => (
         <td
           key={i}
-          className={cellClasses[i] || "py-2 px-4 text-sm text-gray-700"}
+          className={cellClasses[i] || 'py-2 px-4 text-sm text-gray-700'}
         >
           {cell}
         </td>

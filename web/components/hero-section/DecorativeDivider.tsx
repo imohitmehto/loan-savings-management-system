@@ -1,4 +1,4 @@
-"use client";
+'use client';
 export default function DecorativeDivider() {
   return (
     <div className="relative w-full flex justify-center my-4">

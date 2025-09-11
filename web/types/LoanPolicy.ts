@@ -2,7 +2,7 @@ import {
   FeeType,
   InterestType,
   TermPeriod,
-} from "@/utils/enums/loan-policy-enum";
+} from '@/utils/enums/loan-policy-enum';
 
 export interface LoanPolicy {
   id: string;

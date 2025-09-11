@@ -1,5 +1,5 @@
-import inputErrorClass from "@/utils/inputErrorClass.util";
-import { ChangeEventHandler } from "react";
+import inputErrorClass from '@/utils/inputErrorClass.util';
+import { ChangeEventHandler } from 'react';
 
 export default function SelectField({
   label,
@@ -33,8 +33,8 @@ export default function SelectField({
       <select
         id={id}
         name={id}
-        value={value ?? ""}
-        onChange={(e) => {
+        value={value ?? ''}
+        onChange={e => {
           onChange(e);
         }}
         required={required}
@@ -45,8 +45,8 @@ export default function SelectField({
           id,
           error ? { [id]: error } : {},
           `mt-1 block w-full rounded-md border bg-white px-3 py-2 shadow-sm focus:outline-none focus:ring-1 ${
-            disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""
-          }`,
+            disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''
+          }`
         )}
       >
         {required && !value && (
@@ -55,7 +55,7 @@ export default function SelectField({
           </option>
         )}
 
-        {options.map((opt) => (
+        {options.map(opt => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

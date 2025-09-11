@@ -1,6 +1,5 @@
-"use client";
-export * from "./registerSchema";
-export * from "./forgotPasswordSchema";
-export * from "./otpSchema";
-export * from "./loginSchema";
-export * from "./emiSchema";
+'use client';
+export * from './registerSchema';
+export * from './forgotPasswordSchema';
+export * from './otpSchema';
+export * from './loginSchema';

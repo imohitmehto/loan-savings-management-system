@@ -13,4 +13,5 @@ export interface Account {
   groupName?: string;
   imageUrl?: string;
   balance?: number;
+  user?: string;
 }

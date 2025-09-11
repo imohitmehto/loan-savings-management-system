@@ -1,18 +1,18 @@
-import { AxiosError } from "axios";
+import { AxiosError } from 'axios';
 
 /** Custom API error class with HTTP status */
 export class ApiError extends Error {
   status?: number;
   constructor(message: string, status?: number) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.status = status;
   }
 }
 
 /** Handle axios errors and throw typed ApiError */
 export function handleAxiosError(error: unknown): never {
-  let message = "An unexpected error occurred.";
+  let message = 'An unexpected error occurred.';
   let status: number | undefined;
 
   if (error instanceof AxiosError) {
@@ -22,7 +22,7 @@ export function handleAxiosError(error: unknown): never {
       message = data?.message || error.response.statusText || message;
       status = error.response.status;
     } else if (error.request) {
-      message = "No response received from server.";
+      message = 'No response received from server.';
     } else {
       message = error.message;
     }
@@ -30,7 +30,7 @@ export function handleAxiosError(error: unknown): never {
     message = error.message;
   }
 
-  console.error("API Error:", message);
+  console.error('API Error:', message);
   throw new ApiError(message, status);
 }
 
@@ -46,5 +46,5 @@ export async function safeApiCall<T>(callback: () => Promise<T>): Promise<T> {
 /** Optional API debug logging */
 const DEBUG = false;
 export function apiLog(...args: unknown[]) {
-  if (DEBUG) console.log("[API]", ...args);
+  if (DEBUG) console.log('[API]', ...args);
 }

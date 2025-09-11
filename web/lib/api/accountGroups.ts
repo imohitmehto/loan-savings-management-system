@@ -1,5 +1,5 @@
-import api from "@/lib/api/axiosInstance";
-import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
+import api from '@/lib/api/axiosInstance';
+import { ApiError, safeApiCall, apiLog } from './helpers/apiHelpers';
 
 /**
  * ============================================================
@@ -14,8 +14,8 @@ import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
  */
 export const createAccountGroup = (formData: FormData) =>
   safeApiCall(async () => {
-    apiLog("Creating account group...");
-    const { data } = await api.post("/account/group/create", formData);
+    apiLog('Creating account group...');
+    const { data } = await api.post('/account/group/create', formData);
     return data;
   });
 
@@ -24,10 +24,10 @@ export const createAccountGroup = (formData: FormData) =>
  */
 export const fetchAllAccountGroup = () =>
   safeApiCall(async () => {
-    apiLog("Fetching all account groups...");
-    const { data } = await api.get("/account/group/get");
+    apiLog('Fetching all account groups...');
+    const { data } = await api.get('/account/group/get');
     if (!Array.isArray(data)) {
-      throw new ApiError("Invalid data format received from API", 500);
+      throw new ApiError('Invalid data format received from API', 500);
     }
     return data;
   });
@@ -40,7 +40,7 @@ export const fetchAccountGroupById = (id: string) =>
     apiLog(`Fetching account group ID: ${id}`);
     const { data } = await api.get(`/account/group/get/${id}`);
     if (!data) {
-      throw new ApiError("Account group not found", 404);
+      throw new ApiError('Account group not found', 404);
     }
     return data;
   });
@@ -53,7 +53,7 @@ export const updateAccountGroupById = (id: string, payload: FormData) =>
     apiLog(`Updating account group ID: ${id}`);
     const { data } = await api.put(`/account/group/update/${id}`, payload);
     if (!data) {
-      throw new ApiError("Failed to update account group", 500);
+      throw new ApiError('Failed to update account group', 500);
     }
     return data;
   });

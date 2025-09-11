@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { FiGrid } from "react-icons/fi";
+import Link from 'next/link';
+import { FiGrid } from 'react-icons/fi';
 
 export function MobileMenu({
   navItems,
@@ -39,7 +39,7 @@ export function MobileMenu({
                       <span className="font-medium">{item.label}</span>
                     </div>
                     <FiGrid
-                      className={`transition-transform duration-200 ${openIndex === index ? "rotate-90" : ""}`}
+                      className={`transition-transform duration-200 ${openIndex === index ? 'rotate-90' : ''}`}
                     />
                   </button>
                   {item.submenu && openIndex === index && (

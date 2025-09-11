@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import React from "react";
+import { useRouter } from 'next/navigation';
+import React from 'react';
 
 interface NavigationButtonProps {
   route: string; // Destination route
@@ -12,7 +12,7 @@ interface NavigationButtonProps {
 export default function NavigationButton({
   route,
   label,
-  className = "",
+  className = '',
 }: NavigationButtonProps) {
   const router = useRouter();
 

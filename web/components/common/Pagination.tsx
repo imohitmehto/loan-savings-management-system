@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Props for the Pagination component
@@ -32,11 +32,11 @@ export default function Pagination({
   // ==== VALIDATIONS ====
   if (totalPages < 1) return null;
   if (currentPage > totalPages) {
-    console.error("Pagination: currentPage exceeds totalPages");
+    console.error('Pagination: currentPage exceeds totalPages');
     return null;
   }
   if (currentPage < 1) {
-    console.error("Pagination: currentPage must be at least 1");
+    console.error('Pagination: currentPage must be at least 1');
     return null;
   }
 
@@ -57,7 +57,7 @@ export default function Pagination({
 
     if (startPage > 1) {
       pages.push(1);
-      if (startPage > 2) pages.push("...");
+      if (startPage > 2) pages.push('...');
     }
 
     for (let i = startPage; i <= endPage; i++) {
@@ -65,7 +65,7 @@ export default function Pagination({
     }
 
     if (endPage < totalPages) {
-      if (endPage < totalPages - 1) pages.push("...");
+      if (endPage < totalPages - 1) pages.push('...');
       pages.push(totalPages);
     }
 
@@ -98,7 +98,7 @@ export default function Pagination({
 
       {/* Page Numbers */}
       {getPageNumbers().map((page, idx) =>
-        page === "..." ? (
+        page === '...' ? (
           <span key={`ellipsis-${idx}`} className="px-3 py-1 text-gray-500">
             ...
           </span>
@@ -106,18 +106,18 @@ export default function Pagination({
           <button
             key={page}
             onClick={() => handlePageChange(page as number)}
-            aria-current={currentPage === page ? "page" : undefined}
+            aria-current={currentPage === page ? 'page' : undefined}
             className={`px-3 py-1 rounded transition min-w-[32px] text-center focus:outline-none 
               focus:ring-2 focus:ring-blue-500
               ${
                 currentPage === page
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
           >
             {page}
           </button>
-        ),
+        )
       )}
 
       {/* Next Button */}

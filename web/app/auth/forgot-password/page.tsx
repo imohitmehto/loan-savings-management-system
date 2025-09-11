@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
+import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 export default function ForgotPasswordPage() {
   return (
@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
     >
       <ForgotPasswordForm />
       <footer className="absolute bottom-4 text-xs text-gray-300">
-        Developed by{" "}
+        Developed by{' '}
         <a href="#" className="hover:text-white">
           Mohit Mehto 🤍
         </a>

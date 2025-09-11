@@ -1,12 +1,12 @@
-"use client";
+'use client';
 import React, {
   useState,
   useRef,
   useEffect,
   ChangeEventHandler,
   DragEventHandler,
-} from "react";
-import Image from "next/image";
+} from 'react';
+import Image from 'next/image';
 
 export interface ImageUploadFieldProps {
   label: string;
@@ -26,12 +26,12 @@ export default function ImageUploadField({
   placeholder,
   disabled = false,
   maxSizeInMB = 5,
-  acceptedFormats = ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  acceptedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   onChange,
 }: ImageUploadFieldProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [error, setError] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Generate preview URL when file changes
@@ -41,13 +41,13 @@ export default function ImageUploadField({
       setPreviewUrl(url);
       return () => URL.revokeObjectURL(url);
     }
-    setPreviewUrl("");
+    setPreviewUrl('');
   }, [file]);
 
   // Validate the selected file
   const validateFile = (f: File): string | null => {
     if (!acceptedFormats.includes(f.type)) {
-      return `Only ${acceptedFormats.map((t) => t.split("/")[1]).join(", ")} are allowed.`;
+      return `Only ${acceptedFormats.map(t => t.split('/')[1]).join(', ')} are allowed.`;
     }
     if (f.size > maxSizeInMB * 1024 * 1024) {
       return `File must be < ${maxSizeInMB}MB.`;
@@ -56,7 +56,7 @@ export default function ImageUploadField({
   };
 
   // Handle file selection
-  const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {
+  const handleFileChange: ChangeEventHandler<HTMLInputElement> = e => {
     const selected = e.target.files?.[0] ?? null;
     if (selected) {
       const err = validateFile(selected);
@@ -64,7 +64,7 @@ export default function ImageUploadField({
         setError(err);
         return;
       }
-      setError("");
+      setError('');
       setFile(selected);
       onChange(selected);
     }
@@ -73,7 +73,7 @@ export default function ImageUploadField({
   // Remove current file
   const handleDelete = () => {
     setFile(null);
-    setError("");
+    setError('');
     onChange(null);
   };
 
@@ -83,7 +83,7 @@ export default function ImageUploadField({
   };
 
   // Drag & drop handlers
-  const handleDrop: DragEventHandler<HTMLDivElement> = (e) => {
+  const handleDrop: DragEventHandler<HTMLDivElement> = e => {
     e.preventDefault();
     if (disabled) return;
     const dtFile = e.dataTransfer.files[0];
@@ -93,24 +93,24 @@ export default function ImageUploadField({
         setError(err);
         return;
       }
-      setError("");
+      setError('');
       setFile(dtFile);
       onChange(dtFile);
     }
   };
 
-  const shapeClasses = isCircular ? "rounded-full" : "rounded-lg";
-  const sizeClasses = isCircular ? "w-32 h-32" : "w-48 h-48";
+  const shapeClasses = isCircular ? 'rounded-full' : 'rounded-lg';
+  const sizeClasses = isCircular ? 'w-32 h-32' : 'w-48 h-48';
 
   return (
     <div className="flex flex-col items-center">
       <div
         onClick={openPicker}
         onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={e => e.preventDefault()}
         className={`border-2 border-dashed p-2 flex items-center justify-center
                     ${shapeClasses} ${sizeClasses} cursor-pointer
-                    ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-blue-500"}`}
+                    ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500'}`}
         aria-label={label}
       >
         {previewUrl ? (
@@ -124,7 +124,7 @@ export default function ImageUploadField({
             />
             <button
               type="button"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 handleDelete();
               }}
@@ -144,7 +144,7 @@ export default function ImageUploadField({
           ref={inputRef}
           type="file"
           name={name}
-          accept={acceptedFormats.join(",")}
+          accept={acceptedFormats.join(',')}
           onChange={handleFileChange}
           className="hidden"
           disabled={disabled}
@@ -158,10 +158,8 @@ export default function ImageUploadField({
         )}
         {!error && (
           <p className="text-xs text-gray-500">
-            Max {maxSizeInMB}MB •{" "}
-            {acceptedFormats
-              .map((f) => f.split("/")[1].toUpperCase())
-              .join(", ")}
+            Max {maxSizeInMB}MB •{' '}
+            {acceptedFormats.map(f => f.split('/')[1].toUpperCase()).join(', ')}
           </p>
         )}
       </div>

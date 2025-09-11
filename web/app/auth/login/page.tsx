@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import LoginForm from "@/components/auth/LoginForm";
+import LoginForm from '@/components/auth/LoginForm';
 
 export default function LoginPage() {
   return (
@@ -10,7 +10,7 @@ export default function LoginPage() {
     >
       <LoginForm />
       <footer className="absolute bottom-4 text-xs text-gray-300">
-        Developed by{" "}
+        Developed by{' '}
         <a href="#" className="hover:text-white">
           Mohit Mehto 🤍
         </a>

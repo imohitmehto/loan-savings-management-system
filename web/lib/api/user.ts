@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import api from "@/lib/api/axiosInstance";
-import { Account } from "@/types/Account";
-import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
+import api from '@/lib/api/axiosInstance';
+import { Account } from '@/types/Account';
+import { ApiError, safeApiCall, apiLog } from './helpers/apiHelpers';
 
 /**
  * ============================================================
@@ -24,7 +24,7 @@ import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
  */
 export const createAccount = (formData: FormData) =>
   safeApiCall(async () => {
-    const { data } = await api.post("/account/create", formData);
+    const { data } = await api.post('/account/create', formData);
     return data;
   });
 
@@ -38,9 +38,9 @@ export const createAccount = (formData: FormData) =>
  */
 export const fetchProfile = () =>
   safeApiCall(async () => {
-    apiLog("Fetching user...");
-    const { data } = await api.get("/user/profile");
-    if (!data) throw new ApiError("Invalid data format received from API", 500);
+    apiLog('Fetching user...');
+    const { data } = await api.get('/user/profile');
+    if (!data) throw new ApiError('Invalid data format received from API', 500);
     return data;
   });
 
@@ -57,7 +57,7 @@ export const fetchAccountById = (id: string): Promise<Account> =>
   safeApiCall(async () => {
     apiLog(`Fetching account ID: ${id}`);
     const { data } = await api.get<Account>(`/account/${id}`);
-    if (!data) throw new ApiError("Account not found", 404);
+    if (!data) throw new ApiError('Account not found', 404);
     return data;
   });
 
@@ -76,7 +76,7 @@ export const fetchAccountById = (id: string): Promise<Account> =>
  */
 export const updateAccountById = (
   id: string,
-  payload: Partial<Account> | FormData,
+  payload: Partial<Account> | FormData
 ): Promise<Account> =>
   safeApiCall(async () => {
     apiLog(`Updating account ID: ${id}`);
@@ -85,10 +85,10 @@ export const updateAccountById = (
       `/account/${id}`,
       payload,
       isFormData
-        ? { headers: { "Content-Type": "multipart/form-data" } }
-        : undefined,
+        ? { headers: { 'Content-Type': 'multipart/form-data' } }
+        : undefined
     );
-    if (!data) throw new ApiError("Failed to update account", 500);
+    if (!data) throw new ApiError('Failed to update account', 500);
     return data;
   });
 

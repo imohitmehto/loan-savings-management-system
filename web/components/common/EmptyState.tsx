@@ -1,8 +1,8 @@
-import React from "react";
-import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
+import React from 'react';
+import { ExclamationCircleIcon } from '@heroicons/react/24/solid';
 
 export default function EmptyState({
-  message = "No data found.",
+  message = 'No data found.',
 }: {
   message?: string;
 }) {

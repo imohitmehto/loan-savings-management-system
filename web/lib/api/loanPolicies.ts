@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import api from "@/lib/api/axiosInstance";
-import { LoanPolicy } from "@/types/LoanPolicy";
-import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
+import api from '@/lib/api/axiosInstance';
+import { LoanPolicy } from '@/types/LoanPolicy';
+import { ApiError, safeApiCall, apiLog } from './helpers/apiHelpers';
 
 /**
  * ============================================================
@@ -21,8 +21,8 @@ import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
  */
 export const createLoanPolicy = (formData: FormData) =>
   safeApiCall(async () => {
-    apiLog("Creating new loan policy...");
-    const { data } = await api.post("/loan-policy/create", formData);
+    apiLog('Creating new loan policy...');
+    const { data } = await api.post('/loan-policy/create', formData);
     return data;
   });
 
@@ -34,10 +34,10 @@ export const createLoanPolicy = (formData: FormData) =>
  */
 export const fetchAllLoanPolicies = (): Promise<LoanPolicy[]> =>
   safeApiCall(async () => {
-    apiLog("Fetching all loan policies...");
-    const { data } = await api.get<LoanPolicy[]>("/loan-policy/get");
+    apiLog('Fetching all loan policies...');
+    const { data } = await api.get<LoanPolicy[]>('/loan-policy/get');
     if (!Array.isArray(data)) {
-      throw new ApiError("Invalid data format received from API", 500);
+      throw new ApiError('Invalid data format received from API', 500);
     }
     return data;
   });
@@ -53,7 +53,7 @@ export const fetchLoanPolicyById = (id: string): Promise<LoanPolicy> =>
   safeApiCall(async () => {
     apiLog(`Fetching loan policy ID: ${id}`);
     const { data } = await api.get<LoanPolicy>(`/loan-policy/${id}`);
-    if (!data) throw new ApiError("Loan policy not found", 404);
+    if (!data) throw new ApiError('Loan policy not found', 404);
     return data;
   });
 
@@ -67,7 +67,7 @@ export const fetchLoanPolicyById = (id: string): Promise<LoanPolicy> =>
  */
 export const updateLoanPolicyById = (
   id: string,
-  formData: FormData,
+  formData: FormData
 ): Promise<LoanPolicy> =>
   safeApiCall(async () => {
     apiLog(`Updating loan policy ID: ${id}`);

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import api from "@/lib/api/axiosInstance";
-import { Transaction } from "@/types/Transaction";
-import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
+import api from '@/lib/api/axiosInstance';
+import { Transaction } from '@/types/Transaction';
+import { ApiError, safeApiCall, apiLog } from './helpers/apiHelpers';
 
 /**
  * ============================================================
@@ -24,8 +24,8 @@ import { ApiError, safeApiCall, apiLog } from "./helpers/apiHelpers";
  */
 export const createTransaction = (formData: FormData) =>
   safeApiCall(async () => {
-    apiLog("Creating new transaction...");
-    const { data } = await api.post("/transaction/create", formData);
+    apiLog('Creating new transaction...');
+    const { data } = await api.post('/transaction/create', formData);
     return data;
   });
 
@@ -39,10 +39,10 @@ export const createTransaction = (formData: FormData) =>
  */
 export const fetchAllTransactions = (): Promise<Transaction[]> =>
   safeApiCall(async () => {
-    apiLog("Fetching all transactions...");
-    const { data } = await api.get<Transaction[]>("/transaction/get");
+    apiLog('Fetching all transactions...');
+    const { data } = await api.get<Transaction[]>('/transaction/get');
     if (!Array.isArray(data)) {
-      throw new ApiError("Invalid data format received from API", 500);
+      throw new ApiError('Invalid data format received from API', 500);
     }
     return data;
   });
@@ -60,7 +60,7 @@ export const fetchTransactionById = (id: string): Promise<Transaction> =>
   safeApiCall(async () => {
     apiLog(`Fetching transaction ID: ${id}`);
     const { data } = await api.get<Transaction>(`/transaction/get/${id}`);
-    if (!data) throw new ApiError("Transaction not found", 404);
+    if (!data) throw new ApiError('Transaction not found', 404);
     return data;
   });
 

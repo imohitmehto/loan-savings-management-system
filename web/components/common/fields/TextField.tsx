@@ -2,8 +2,8 @@ import {
   ChangeEventHandler,
   InputHTMLAttributes,
   TextareaHTMLAttributes,
-} from "react";
-import inputErrorClass from "@/utils/inputErrorClass.util";
+} from 'react';
+import inputErrorClass from '@/utils/inputErrorClass.util';
 
 type BaseProps = {
   label: string;
@@ -24,24 +24,24 @@ type BaseProps = {
 type TextFieldProps = BaseProps &
   Omit<
     InputHTMLAttributes<HTMLInputElement>,
-    | "value"
-    | "onChange"
-    | "id"
-    | "name"
-    | "type"
-    | "required"
-    | "autoComplete"
-    | "disabled"
+    | 'value'
+    | 'onChange'
+    | 'id'
+    | 'name'
+    | 'type'
+    | 'required'
+    | 'autoComplete'
+    | 'disabled'
   > &
   Omit<
     TextareaHTMLAttributes<HTMLTextAreaElement>,
-    | "value"
-    | "onChange"
-    | "id"
-    | "name"
-    | "required"
-    | "autoComplete"
-    | "disabled"
+    | 'value'
+    | 'onChange'
+    | 'id'
+    | 'name'
+    | 'required'
+    | 'autoComplete'
+    | 'disabled'
   >;
 
 export default function TextField({
@@ -52,7 +52,7 @@ export default function TextField({
   onChange,
   required = false,
   error,
-  type = "text",
+  type = 'text',
   max,
   autoComplete,
   disabled = false,
@@ -75,7 +75,7 @@ export default function TextField({
         <textarea
           id={id}
           name={inputName}
-          value={value ?? ""}
+          value={value ?? ''}
           onChange={onChange}
           required={required}
           rows={rows}
@@ -88,7 +88,7 @@ export default function TextField({
             inputName,
             error ? { [inputName]: error } : {},
             `mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-1
-            ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`
+            ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`
           )}
         />
       ) : (
@@ -96,7 +96,7 @@ export default function TextField({
           type={type}
           id={id}
           name={inputName}
-          value={value ?? ""}
+          value={value ?? ''}
           onChange={onChange}
           required={required}
           max={max}
@@ -109,7 +109,7 @@ export default function TextField({
             inputName,
             error ? { [inputName]: error } : {},
             `mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-1
-            ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`
+            ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`
           )}
         />
       )}

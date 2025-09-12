@@ -163,7 +163,7 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "docker-compose.yml,deploy.sh"
-          target: ${{ secrets.DOCKER_COMPOSE_DIR }}
+          target: "/opt/sanskarmalviswarnkar/"
           debug: true
 
       - name: Deploy to VPS

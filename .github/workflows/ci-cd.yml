@@ -159,8 +159,8 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: |
-            ${{ github.workspace }}/docker-compose.yml
-            ${{ github.workspace }}/deploy.sh
+            /github/workspace/docker-compose.yml
+            /github/workspace/deploy.sh
           target: ${{ secrets.DOCKER_COMPOSE_DIR }}
           debug: true
 

@@ -35,7 +35,7 @@ export class AccountService {
     private readonly accountNumberUtil: AccountNumberUtil,
     private readonly hashService: Hash,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Fetch all accounts.
@@ -382,16 +382,16 @@ export class AccountService {
         description: dto.description ?? "",
         ...(dto.addAccountIds?.length || dto.removeAccountIds?.length
           ? {
-            accounts: {
-              connect:
-                dto.addAccountIds?.map((accountId) => ({ id: accountId })) ??
-                [],
-              disconnect:
-                dto.removeAccountIds?.map((accountId) => ({
-                  id: accountId,
-                })) ?? [],
-            },
-          }
+              accounts: {
+                connect:
+                  dto.addAccountIds?.map((accountId) => ({ id: accountId })) ??
+                  [],
+                disconnect:
+                  dto.removeAccountIds?.map((accountId) => ({
+                    id: accountId,
+                  })) ?? [],
+              },
+            }
           : {}),
       },
       include: {
@@ -455,11 +455,11 @@ export class AccountService {
         phoneNumber: nominee.phoneNumber || undefined,
         address: nominee.address
           ? {
-            create: {
-              ...nominee.address,
-              type: nominee.address.type,
-            },
-          }
+              create: {
+                ...nominee.address,
+                type: nominee.address.type,
+              },
+            }
           : undefined,
       })),
     };

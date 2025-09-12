@@ -1,12 +1,9 @@
-import { Module } from '@nestjs/common';
-import { PrismaModule } from 'src/infrastructure/database/prisma.module';
+import { Module } from "@nestjs/common";
+import { PrismaModule } from "src/infrastructure/database/prisma.module";
 
 @Module({
   imports: [PrismaModule],
-  providers: [
-  ],
-  exports: [
-  ],
+  providers: [],
+  exports: [],
 })
-export class LoanModule { }
-
+export class LoanModule {}

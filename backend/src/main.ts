@@ -143,34 +143,29 @@ async function bootstrap() {
 
     app.useLogger(logger);
 
-    app.enableCors({
-      origin: "*", // or your frontend URL
-      credentials: true,
-    });
-
     /**
      * CORS
      */
-    // const corsConfig = configService.get("app.cors");
-    // app.enableCors({
-    //   origin: (origin, callback) => {
-    //     if (
-    //       !origin ||
-    //       (!isProduction &&
-    //         (origin.includes("localhost") || origin.includes("127.0.0.1"))) ||
-    //       corsConfig.origin.includes(origin)
-    //     ) {
-    //       callback(null, true);
-    //     } else {
-    //       callback(new Error("CORS not allowed for this origin"));
-    //     }
-    //   },
-    //   credentials: corsConfig.credentials,
-    //   methods: corsConfig.methods,
-    //   allowedHeaders: corsConfig.allowedHeaders,
-    //   exposedHeaders: corsConfig.exposedHeaders,
-    //   maxAge: corsConfig.maxAge,
-    // });
+    const corsConfig = configService.get("app.cors");
+    app.enableCors({
+      origin: (origin, callback) => {
+        if (
+          !origin ||
+          (!isProduction &&
+            (origin.includes("localhost") || origin.includes("127.0.0.1"))) ||
+          corsConfig.origin.includes(origin)
+        ) {
+          callback(null, true);
+        } else {
+          callback(new Error("CORS not allowed for this origin"));
+        }
+      },
+      credentials: corsConfig.credentials,
+      methods: corsConfig.methods,
+      allowedHeaders: corsConfig.allowedHeaders,
+      exposedHeaders: corsConfig.exposedHeaders,
+      maxAge: corsConfig.maxAge,
+    });
 
     if (configService.get("app.environment") === "development") {
       app.use(morgan("dev"));

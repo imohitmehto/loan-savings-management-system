@@ -146,6 +146,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: List files
+        run: |
+          pwd
+          ls -l
+          ls -l deploy/ || true
 
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7

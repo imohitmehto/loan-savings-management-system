@@ -154,7 +154,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "./docker-compose.yml ./deploy.sh"
+          source: "docker-compose.yml deploy.sh"
           target: "/opt/sanskarmalviswarnkar/"
 
       - name: Deploy to VPS

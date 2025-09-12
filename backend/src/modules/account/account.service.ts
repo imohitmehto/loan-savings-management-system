@@ -283,138 +283,138 @@ export class AccountService {
 
     // const updateData = toPrismaUpdate(dto);
 
-    return await "Updated";
+    return { message: "Updated" };
 
     // try {
     //   return await this.prisma.account.update({
     //     where: { id },
     //     data: updateData,
     //   });
-  } catch(error) {
-    console.error("UpdateAccountError:", error);
-    throw new InternalServerErrorException("Failed to update account");
+    // } catch(error) {
+    //   console.error("UpdateAccountError:", error);
+    //   throw new InternalServerErrorException("Failed to update account");
+    // }
   }
-}
 
   /**
    * Delete account by ID.
    */
-  async deleteAccount(id: string): Promise < boolean > {
-  const existing = await this.prisma.account.findUnique({ where: { id } });
-  if(!existing) {
-    return false;
-  }
+  async deleteAccount(id: string): Promise<boolean> {
+    const existing = await this.prisma.account.findUnique({ where: { id } });
+    if (!existing) {
+      return false;
+    }
     await this.prisma.account.delete({ where: { id } });
-  return true;
-}
+    return true;
+  }
 
-  async ValidateEmail(email: string): Promise < boolean > {
-  const account = await this.prisma.account.findUnique({ where: { email } });
+  async ValidateEmail(email: string): Promise<boolean> {
+    const account = await this.prisma.account.findUnique({ where: { email } });
 
-  if(!account) return false;
-  else return true;
-}
+    if (!account) return false;
+    else return true;
+  }
 
   /*  *************** ACCOUNT GROUP ***************  */
 
   /**
    * Fetch all account groups sorted by name.
    */
-  async getAllAccountGroup(): Promise < AccountGroup[] > {
-  return this.prisma.accountGroup.findMany({
-    include: { accounts: true },
-    orderBy: { name: "asc" },
-  });
-}
+  async getAllAccountGroup(): Promise<AccountGroup[]> {
+    return this.prisma.accountGroup.findMany({
+      include: { accounts: true },
+      orderBy: { name: "asc" },
+    });
+  }
 
   /**
    * Get account group by ID.
    */
-  async getAccountGroupById(id: string): Promise < AccountGroup > {
-  const accountGroup = await this.prisma.accountGroup.findUnique({
-    where: { id },
-    include: { accounts: true },
-  });
-  if(!accountGroup) {
-    throw new NotFoundException(`Account Group with ID ${id} not found`);
-  }
+  async getAccountGroupById(id: string): Promise<AccountGroup> {
+    const accountGroup = await this.prisma.accountGroup.findUnique({
+      where: { id },
+      include: { accounts: true },
+    });
+    if (!accountGroup) {
+      throw new NotFoundException(`Account Group with ID ${id} not found`);
+    }
     return accountGroup;
-}
+  }
 
   /**
    * Create new account group with optional account/profit connections.
    */
-  async createAccountGroup(dto: CreateAccountGroupDto): Promise < AccountGroup > {
-  return this.prisma.accountGroup.create({
-    data: {
-      name: dto.name,
-      description: dto.description || "",
-      accounts: dto.accountIds?.length
-        ? { connect: dto.accountIds.map((id) => ({ id })) }
-        : undefined,
-    },
-    include: {
-      accounts: {
-        select: { accountNumber: true, firstName: true, lastName: true },
+  async createAccountGroup(dto: CreateAccountGroupDto): Promise<AccountGroup> {
+    return this.prisma.accountGroup.create({
+      data: {
+        name: dto.name,
+        description: dto.description || "",
+        accounts: dto.accountIds?.length
+          ? { connect: dto.accountIds.map((id) => ({ id })) }
+          : undefined,
       },
-    },
-  });
-}
+      include: {
+        accounts: {
+          select: { accountNumber: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
 
   /**
    * Update account group.
    */
   async updateAccountGroup(
-  id: string,
-  dto: UpdateAccountGroupDto,
-): Promise < AccountGroup > {
-  const existing = await this.prisma.accountGroup.findUnique({
-    where: { id },
-  });
-  if(!existing) {
-    throw new NotFoundException(`Account Group with ID ${id} not found`);
-  }
+    id: string,
+    dto: UpdateAccountGroupDto,
+  ): Promise<AccountGroup> {
+    const existing = await this.prisma.accountGroup.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Account Group with ID ${id} not found`);
+    }
 
     return this.prisma.accountGroup.update({
-    where: { id },
-    data: {
-      name: dto.name,
-      description: dto.description ?? "",
-      ...(dto.addAccountIds?.length || dto.removeAccountIds?.length
-        ? {
-          accounts: {
-            connect:
-              dto.addAccountIds?.map((accountId) => ({ id: accountId })) ??
-              [],
-            disconnect:
-              dto.removeAccountIds?.map((accountId) => ({
-                id: accountId,
-              })) ?? [],
-          },
-        }
-        : {}),
-    },
-    include: {
-      accounts: {
-        select: { accountNumber: true, firstName: true, lastName: true },
+      where: { id },
+      data: {
+        name: dto.name,
+        description: dto.description ?? "",
+        ...(dto.addAccountIds?.length || dto.removeAccountIds?.length
+          ? {
+            accounts: {
+              connect:
+                dto.addAccountIds?.map((accountId) => ({ id: accountId })) ??
+                [],
+              disconnect:
+                dto.removeAccountIds?.map((accountId) => ({
+                  id: accountId,
+                })) ?? [],
+            },
+          }
+          : {}),
       },
-    },
-  });
-}
+      include: {
+        accounts: {
+          select: { accountNumber: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
 
   /**
    * Delete account group by ID.
    */
-  async deleteAccountGroup(id: string): Promise < boolean > {
-  const existing = await this.prisma.accountGroup.findUnique({
-    where: { id },
-  });
-  if(!existing) {
-    return false;
-  }
+  async deleteAccountGroup(id: string): Promise<boolean> {
+    const existing = await this.prisma.accountGroup.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      return false;
+    }
     await this.prisma.accountGroup.delete({ where: { id } });
-  return true;
-}
+    return true;
+  }
 
   // ---------------------- PRIVATE HELPERS ----------------------
 
@@ -422,60 +422,60 @@ export class AccountService {
    * Map uploaded file names into the DTO.
    */
   private mapUploadedFiles(
-  dto: CreateAccountDto | UpdateAccountDto,
-  files ?: {
-    photo?: Express.Multer.File[];
-    panCard?: Express.Multer.File[];
-    aadhaarCard?: Express.Multer.File[];
-  },
-) {
-  if (files?.photo?.[0]) {
-    dto.photo = files.photo[0].filename;
+    dto: CreateAccountDto | UpdateAccountDto,
+    files?: {
+      photo?: Express.Multer.File[];
+      panCard?: Express.Multer.File[];
+      aadhaarCard?: Express.Multer.File[];
+    },
+  ) {
+    if (files?.photo?.[0]) {
+      dto.photo = files.photo[0].filename;
+    }
+    if (files?.panCard?.[0]) {
+      dto.panCard = files.panCard[0].filename;
+    }
+    if (files?.aadhaarCard?.[0]) {
+      dto.aadhaarCard = files.aadhaarCard[0].filename;
+    }
   }
-  if (files?.panCard?.[0]) {
-    dto.panCard = files.panCard[0].filename;
-  }
-  if (files?.aadhaarCard?.[0]) {
-    dto.aadhaarCard = files.aadhaarCard[0].filename;
-  }
-}
 
   /**
    * Prepares nominee data for Prisma create.
    */
   private prepareNomineeData(dto: CreateAccountDto) {
-  if (!Array.isArray(dto.nominees) || dto.nominees.length === 0)
-    return undefined;
-  return {
-    create: dto.nominees.map((nominee) => ({
-      firstName: nominee.firstName ?? "",
-      lastName: nominee.lastName ?? "",
-      relation: nominee.relation ?? "",
-      email: nominee.email || undefined,
-      phoneNumber: nominee.phoneNumber || undefined,
-      address: nominee.address
-        ? {
-          create: {
-            ...nominee.address,
-            type: nominee.address.type,
-          },
-        }
-        : undefined,
-    })),
-  };
-}
+    if (!Array.isArray(dto.nominees) || dto.nominees.length === 0)
+      return undefined;
+    return {
+      create: dto.nominees.map((nominee) => ({
+        firstName: nominee.firstName ?? "",
+        lastName: nominee.lastName ?? "",
+        relation: nominee.relation ?? "",
+        email: nominee.email || undefined,
+        phoneNumber: nominee.phoneNumber || undefined,
+        address: nominee.address
+          ? {
+            create: {
+              ...nominee.address,
+              type: nominee.address.type,
+            },
+          }
+          : undefined,
+      })),
+    };
+  }
 
   /**
    * Prepares address data for Prisma create.
    */
   private prepareAddressData(dto: CreateAccountDto) {
-  if (!Array.isArray(dto.addresses) || dto.addresses.length === 0)
-    return undefined;
-  return {
-    create: dto.addresses.map((address) => ({
-      ...address,
-      type: address.type,
-    })),
-  };
-}
+    if (!Array.isArray(dto.addresses) || dto.addresses.length === 0)
+      return undefined;
+    return {
+      create: dto.addresses.map((address) => ({
+        ...address,
+        type: address.type,
+      })),
+    };
+  }
 }

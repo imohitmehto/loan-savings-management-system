@@ -147,15 +147,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List files in workspace
-        run: |
-          echo "Working directory: $GITHUB_WORKSPACE"
-          ls -l $GITHUB_WORKSPACE
-
-      - name: Verify files exist
-        run: |
-          ls -l $GITHUB_WORKSPACE
       - name: Copy deployment files
+        id: scp_copy
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -165,12 +159,33 @@ jobs:
           source: "docker-compose.yml,deploy.sh"
           target: ${{ secrets.DOCKER_COMPOSE_DIR }}
           overwrite: true
-          timeout: 300s
-          command_timeout: 120s
-          debug: true
+
+      - name: Copy files using native SCP (Fallback)
+        if: steps.scp_copy.outcome == 'failure'
+        run: |
+          echo "🔄 Falling back to native SCP..."
+          
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/github_actions
+          chmod 600 ~/.ssh/github_actions
+          ssh-keyscan -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          
+          # Copy files
+          scp -i ~/.ssh/github_actions -P ${{ secrets.SERVER_SSH_PORT }} \
+              docker-compose.yml deploy.sh \
+              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DOCKER_COMPOSE_DIR }}/
+          
+          # Cleanup
+          rm -f ~/.ssh/github_actions
+          echo "✅ Files copied successfully using native SCP"
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -187,11 +202,14 @@ jobs:
       - name: Run migrations
         if: needs.detect-changes.outputs.backend_changed == 'true'
         uses: appleboy/ssh-action@v1
+        env:
+          COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 180s
           envs: COMPOSE_DIR
           script: |
             cd "${COMPOSE_DIR}"

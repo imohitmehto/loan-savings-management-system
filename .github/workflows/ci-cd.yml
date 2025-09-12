@@ -147,6 +147,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug workspace
+        run: |
+          echo "📂 Current directory: $(pwd)"
+          ls -lah
+          
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7
         with:

@@ -147,18 +147,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug workspace
+      - name: Debug secret directly
         run: |
-          echo "📂 Current directory: $(pwd)"
-          ls -lah
-
-      - name: Validate deployment files exist
-        run: |
-          test -f ./docker-compose.yml || (echo "❌ docker-compose.yml missing" && exit 1)
-          test -f ./deploy.sh || (echo "❌ deploy.sh missing" && exit 1)
-          echo "✅ Both deployment files are present"
-          echo "COMPOSE_DIR is: ${COMPOSE_DIR}"
-
+          echo "COMPOSE_DIR secret is: ${{ secrets.DOCKER_COMPOSE_DIR }}"
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7
         with:

@@ -157,7 +157,7 @@ jobs:
           test -f ./docker-compose.yml || (echo "❌ docker-compose.yml missing" && exit 1)
           test -f ./deploy.sh || (echo "❌ deploy.sh missing" && exit 1)
           echo "✅ Both deployment files are present"
-          echo "Using secret target: ${{ secrets.DOCKER_COMPOSE_DIR }}"
+          echo "COMPOSE_DIR is: ${COMPOSE_DIR}"
 
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7

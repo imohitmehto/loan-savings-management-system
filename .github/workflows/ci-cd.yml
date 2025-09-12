@@ -146,12 +146,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: List files
-        run: |
-          pwd
-          ls -l
-          ls -l deploy/ || true
-
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -159,8 +153,10 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "docker-compose.yml deploy.sh"
-          target: "/opt/sanskarmalviswarnkar/"
+          source: |
+            docker-compose.yml
+            deploy.sh
+          target: ${{ secrets.DOCKER_COMPOSE_DIR }}
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1

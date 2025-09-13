@@ -1,0 +1,115 @@
+# Build and deployment files
+!docker-compose.yml
+!deploy.sh
+!.env
+
+# Nginx configuration
+!nginx/
+!nginx/**
+
+# PostgreSQL configuration  
+!postgres/
+!postgres/**
+
+# Scripts
+!scripts/
+!scripts/**
+
+# Version control
+.git/
+.gitignore
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment files (except production .env)
+.env.local
+.env.development
+.env.test
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build artifacts
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Dependencies (if building in Docker)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Database files (persistent data handled by volumes)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Documentation
+docs/
+README.md
+CHANGELOG.md
+LICENSE
+
+# CI/CD files (don't expose in containers)
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Testing
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+jest.config.js
+cypress/
+e2e/
+
+# Linting
+.eslintrc*
+.prettierrc*
+.stylelintrc*
+
+# Package manager files  
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npmrc
+.yarnrc
+
+# Docker development files
+Dockerfile.dev
+docker-compose.dev.yml
+docker-compose.override.yml

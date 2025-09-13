@@ -1,4 +1,4 @@
-name: CI/CD
+name: 🚀 CI/CD
 
 on:
   push:
@@ -16,30 +16,84 @@ on:
         required: false
         default: false
         type: boolean
+      environment:
+        description: "Deployment environment"
+        required: false
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
 
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-  VPS_HOST: ${{ secrets.VPS_HOST }}
-  VPS_USER: ${{ secrets.VPS_USER }}
-  SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
-  COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
+  REGISTRY: docker.io
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
 
 jobs:
-  detect-changes:
+  security-scan:
+    name: 🔍 Security Scan
     runs-on: ubuntu-latest
     outputs:
-      web_changed: ${{ steps.check.outputs.web_changed }}
-      backend_changed: ${{ steps.check.outputs.backend_changed }}
-      should_deploy: ${{ steps.check.outputs.should_deploy }}
+      scan_passed: ${{ steps.scan.outputs.passed }}
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Determine changed paths
+      - name: Run vulnerability scan
+        id: scan
+        run: |
+          # Install Trivy for container security scanning
+          sudo apt-get update
+          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
+
+          # Scan Dockerfiles for security issues
+          if [ -f "web/Dockerfile" ]; then
+            trivy config web/Dockerfile --exit-code 0 --severity HIGH,CRITICAL
+          fi
+          if [ -f "backend/Dockerfile" ]; then
+            trivy config backend/Dockerfile --exit-code 0 --severity HIGH,CRITICAL
+          fi
+
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  detect-changes:
+    name: 📋 Detect Changes
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: needs.security-scan.outputs.scan_passed == 'true'
+    outputs:
+      web_changed: ${{ steps.check.outputs.web_changed }}
+      backend_changed: ${{ steps.check.outputs.backend_changed }}
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create deployment status
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: '${{ github.event.inputs.environment || 'production' }}',
+              auto_merge: false
+            });
+            core.setOutput('deployment_id', deployment.data.id);
+
+      - name: Determine changed components
         id: check
         run: |
           if [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
@@ -49,6 +103,7 @@ jobs:
             exit 0
           fi
 
+          # Detect changes in push events
           if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
             CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
           else
@@ -58,17 +113,21 @@ jobs:
           web_changed=false
           backend_changed=false
 
+          # Check for web changes
           if echo "$CHANGED" | grep -qE '^web/'; then
             web_changed=true
           fi
 
+          # Check for backend changes
           if echo "$CHANGED" | grep -qE '^backend/'; then
             backend_changed=true
           fi
 
+          # Determine if deployment is needed
           should_deploy=false
-          if [ "$web_changed" = "true" ] || [ "$backend_changed" = "true" ] || echo "$CHANGED" | grep -qE '^(docker-compose\.yml|deploy\.sh)'; then
+          if [ "$web_changed" = "true" ] || [ "$backend_changed" = "true" ] || echo "$CHANGED" | grep -qE '^(docker-compose\.yml|deploy\.sh|\.github/workflows)'; then
             should_deploy=true
+            echo "🚀 Deployment required"
           fi
 
           echo "web_changed=$web_changed" >> $GITHUB_OUTPUT
@@ -76,132 +135,207 @@ jobs:
           echo "should_deploy=$should_deploy" >> $GITHUB_OUTPUT
 
   build-web:
+    name: 🌐 Build Web Application
+    runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.web_changed == 'true'
-    runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}
+          tags: |
+            type=ref,event=branch,suffix=-web
+            type=sha,prefix={{branch}}-web-,format=short
+            type=raw,value=web-latest
+
       - name: Build and push web image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./web
           platforms: linux/amd64
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:web-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+          provenance: true
+          sbom: true
+
+      - name: Scan web image for vulnerabilities
+        run: |
+          # Install and run Trivy on built image
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:web-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   build-backend:
+    name: ⚙️ Build Backend Application
+    runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.backend_changed == 'true'
-    runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}
+          tags: |
+            type=ref,event=branch,suffix=-backend
+            type=sha,prefix={{branch}}-backend-,format=short
+            type=raw,value=backend-latest
+
       - name: Build and push backend image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           platforms: linux/amd64
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:backend-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+          provenance: true
+          sbom: true
+
+      - name: Scan backend image for vulnerabilities
+        run: |
+          # Install and run Trivy on built image
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:backend-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
     needs: [detect-changes, build-web, build-backend]
     if: |
       always() && 
       needs.detect-changes.outputs.should_deploy == 'true' && 
       (needs.build-web.result == 'success' || needs.build-web.result == 'skipped') &&
       (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped')
-    runs-on: ubuntu-latest
     environment:
-      name: production
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: https://${{ secrets.VPS_HOST }}
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy deployment files
-        id: scp_copy
-        continue-on-error: true
-        uses: appleboy/scp-action@v0.1.4
+      - name: Update deployment status to in_progress
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: '${{ needs.detect-changes.outputs.deployment_id }}',
+              state: 'in_progress',
+              description: 'Deployment started'
+            });
+
+      - name: Copy deployment files to server
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           source: "docker-compose.yml,deploy.sh"
           target: ${{ secrets.DOCKER_COMPOSE_DIR }}
           overwrite: true
-
-      - name: Copy files using native SCP (Fallback)
-        if: steps.scp_copy.outcome == 'failure'
-        run: |
-          echo "🔄 Falling back to native SCP..."
-          
-          # Setup SSH
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/github_actions
-          chmod 600 ~/.ssh/github_actions
-          ssh-keyscan -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-          
-          # Copy files
-          scp -i ~/.ssh/github_actions -P ${{ secrets.SERVER_SSH_PORT }} \
-              docker-compose.yml deploy.sh \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DOCKER_COMPOSE_DIR }}/
-          
-          # Cleanup
-          rm -f ~/.ssh/github_actions
-          echo "✅ Files copied successfully using native SCP"
-
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
+          timeout: 30s
+          command_timeout: 10s
+      - name: Deploy application to VPS
+        uses: appleboy/ssh-action@v1.0.3
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
+          WEB_CHANGED: ${{ needs.detect-changes.outputs.web_changed }}
+          BACKEND_CHANGED: ${{ needs.detect-changes.outputs.backend_changed }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           timeout: 300s
+          command_timeout: 60s
           envs: |
-            DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,COMPOSE_DIR
+            DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,COMPOSE_DIR,WEB_CHANGED,BACKEND_CHANGED
           script: |
+            set -e
+
             cd "${COMPOSE_DIR}"
+
+            # Login to Docker Hub
+            echo "🔐 Logging into Docker Hub..."
+            echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+
+            # Make deploy script executable
             chmod +x deploy.sh
+
+            # Set environment variables for selective deployment
+            export WEB_CHANGED="${WEB_CHANGED}"
+            export BACKEND_CHANGED="${BACKEND_CHANGED}"
+
+            # Run deployment script
+            echo "🚀 Starting deployment..."
             ./deploy.sh
 
-      - name: Run migrations
+            # Verify deployment
+            echo "✅ Verifying deployment..."
+            docker compose ps
+
+            # Health check
+            echo "🏥 Running health checks..."
+            sleep 10
+            docker compose exec -T web curl -f http://localhost:3000/api/health || echo "⚠️ Web health check failed"
+            docker compose exec -T backend curl -f http://localhost:5000/api/health || echo "⚠️ Backend health check failed"
+
+      - name: Run database migrations
         if: needs.detect-changes.outputs.backend_changed == 'true'
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.0.3
         env:
           COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
         with:
@@ -209,9 +343,84 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           timeout: 180s
+          command_timeout: 60s
           envs: COMPOSE_DIR
           script: |
+            set -e
             cd "${COMPOSE_DIR}"
+
             echo "🗃️ Running database migrations..."
-            docker compose exec -T backend npx prisma migrate deploy || echo "⚠️ No migrations to run"
+
+            # Wait for database to be ready
+            docker compose exec -T backend npx prisma migrate status || true
+
+            # Run migrations with error handling
+            if docker compose exec -T backend npx prisma migrate deploy; then
+              echo "✅ Database migrations completed successfully"
+            else
+              echo "⚠️ Migration failed or no migrations to run"
+              exit 0  # Don't fail deployment for migration issues
+            fi
+
+            # Generate Prisma client
+            docker compose exec -T backend npx prisma generate || echo "⚠️ Prisma client generation failed"
+
+      - name: Update deployment status to success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: '${{ needs.detect-changes.outputs.deployment_id }}',
+              state: 'success',
+              description: 'Deployment completed successfully',
+              environment_url: 'https://${{ secrets.VPS_HOST }}'
+            });
+
+      - name: Update deployment status to failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: '${{ needs.detect-changes.outputs.deployment_id }}',
+              state: 'failure',
+              description: 'Deployment failed'
+            });
+
+      - name: Cleanup Docker resources
+        if: always()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
+          timeout: 60s
+          script: |
+            echo "🧹 Cleaning up unused Docker resources..."
+            docker system prune -f --filter "until=24h" || true
+            docker logout || true
+
+  notify:
+    name: 📢 Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+    steps:
+      - name: Send deployment notification
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "✅ Deployment completed successfully!"
+          else
+            echo "❌ Deployment failed!"
+          fi

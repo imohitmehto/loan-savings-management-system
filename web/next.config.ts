@@ -43,6 +43,9 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    outputFileTracingRoot: undefined,
+  },
 
   images: {
     remotePatterns: [
@@ -59,6 +62,15 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: securityHeaders,
+      },
+    ];
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/healthz',
+        destination: '/api/health',
       },
     ];
   },

@@ -3,42 +3,75 @@ version: "3.8"
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: SMS_postgres
     restart: unless-stopped
     env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGPORT: 5433
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "${DB_EXTERNAL_PORT:-15433}:5433"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     networks:
-      - app-network
+      - database-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p 5433",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
     logging:
+      driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
   backend:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:backend-latest
-    container_name: backend
+    container_name: SMS_backend
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     env_file: .env
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+    ports:
+      - "5000:5000"
     volumes:
-      - backend_uploads:/app/uploads
+      - ./data/uploads:/app/uploads
+      - ./data/logs/backend:/app/logs
     networks:
       - app-network
+      - database-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:5000/api/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -47,23 +80,41 @@ services:
       resources:
         limits:
           memory: 512M
+        reservations:
+          memory: 256M
     logging:
+      driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
   web:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:web-latest
-    container_name: web
+    container_name: SMS_web
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     env_file: .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/logs/web:/app/logs
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -72,21 +123,27 @@ services:
       resources:
         limits:
           memory: 512M
+        reservations:
+          memory: 256M
     logging:
+      driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
   nginx:
     image: nginx:1.25-alpine
-    container_name: nginx
+    container_name: SMS_nginx
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites-available:/etc/nginx/sites-available:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./data/logs/nginx:/var/log/nginx
+      - ./nginx/certbot:/var/www/certbot:ro
     depends_on:
       web:
         condition: service_healthy
@@ -95,22 +152,36 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
           memory: 128M
+        reservations:
+          memory: 64M
     logging:
+      driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-volumes:
-  pgdata:
-  backend_uploads:
-
 networks:
   app-network:
+    driver: bridge
+    name: sms_app_network
+
+  database-network:
+    driver: bridge
+    name: sms_db_network

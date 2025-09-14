@@ -253,7 +253,6 @@ jobs:
       (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped')
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
-      url: https://${{ secrets.VPS_HOST }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

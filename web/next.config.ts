@@ -44,6 +44,7 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   experimental: {
+    webpackMemoryOptimizations: true,
     outputFileTracingRoot: undefined,
   },
 

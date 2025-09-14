@@ -3,21 +3,21 @@
 import { useState, useEffect } from 'react';
 
 export function useSplashScreen() {
-    const [showSplash, setShowSplash] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const hasVisited = sessionStorage.getItem('hasVisited');
+  useEffect(() => {
+    const hasVisited = sessionStorage.getItem('hasVisited');
 
-        if (!hasVisited) {
-            setShowSplash(true);
-            sessionStorage.setItem('hasVisited', 'true');
-        }
+    if (!hasVisited) {
+      setShowSplash(true);
+      sessionStorage.setItem('hasVisited', 'true');
+    }
 
-        setIsLoading(false);
-    }, []);
+    setIsLoading(false);
+  }, []);
 
-    const hideSplash = () => setShowSplash(false);
+  const hideSplash = () => setShowSplash(false);
 
-    return { showSplash, isLoading, hideSplash };
+  return { showSplash, isLoading, hideSplash };
 }

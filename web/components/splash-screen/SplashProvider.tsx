@@ -14,14 +14,14 @@ export default function SplashProvider({
   useEffect(() => {
     // Check if user has visited before in this session
     const hasVisited = sessionStorage.getItem('hasVisited');
-    
+
     if (!hasVisited) {
       setShowSplash(true);
       sessionStorage.setItem('hasVisited', 'true');
     } else {
       setShowSplash(false);
     }
-    
+
     setIsLoading(false);
   }, []);
 

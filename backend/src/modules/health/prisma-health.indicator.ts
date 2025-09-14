@@ -17,12 +17,8 @@ export class PrismaHealthIndicator extends HealthIndicator {
       // Simple query to test database connectivity
       await this.prismaService.$queryRaw`SELECT 1`;
 
-      // Optional: Test a simple query on one of your tables
-      const userCount = await this.prismaService.user.count();
-
       return this.getStatus(key, true, {
         database: "connected",
-        userCount,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

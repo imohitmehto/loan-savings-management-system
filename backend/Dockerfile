@@ -9,13 +9,16 @@ RUN apk add --no-cache libc6-compat
 FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
+# Set NODE_ENV=production only for production deps
+ENV NODE_ENV=production
 RUN npm ci --omit=dev
 
 # ===== BUILDER =====
 FROM base AS builder
 WORKDIR /app
 COPY package*.json ./
-# Install ALL dependencies (including devDependencies) for building
+# Set NODE_ENV=development to ensure devDependencies are installed
+ENV NODE_ENV=development
 RUN npm ci
 COPY . .
 # Generate Prisma client
@@ -26,6 +29,8 @@ RUN npm run build
 # ===== RUNTIME =====
 FROM base AS runtime
 WORKDIR /app
+# Now set NODE_ENV=production for runtime
+ENV NODE_ENV=production
 
 # Install only required tools
 RUN apk add --no-cache curl

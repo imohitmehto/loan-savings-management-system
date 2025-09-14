@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build && npm run copy:templates",
+    "build": "npx @nestjs/cli build && npm run copy:templates",
     "copy:templates": "cpx \"src/common/templates/**/*\" dist/common/templates",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",

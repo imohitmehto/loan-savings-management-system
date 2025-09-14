@@ -220,7 +220,6 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           timeout: 300s
           envs: |
             DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,WEB_CHANGED,BACKEND_CHANGED
@@ -292,7 +291,6 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           source: "docker-compose.yml,deploy.sh"
           target: ${{ secrets.DOCKER_COMPOSE_DIR }}
           overwrite: true
@@ -306,7 +304,6 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           timeout: 120s
           script: |
             set -e
@@ -334,7 +331,6 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           script: |
             echo "🧹 Cleaning up..."
             docker system prune -f --filter "until=24h" || true

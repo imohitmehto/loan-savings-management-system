@@ -1,4 +1,4 @@
-# Implementation Summary#
+# Implementation Summary
 
 This comprehensive loan module provides:
 

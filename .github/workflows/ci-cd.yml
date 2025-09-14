@@ -206,7 +206,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      - name: Copy deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          source: "docker-compose.yml,deploy.sh"
+          target: ${{ secrets.DOCKER_COMPOSE_DIR }}
+          overwrite: true
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -282,19 +292,6 @@ jobs:
             if docker compose ps --services --filter "status=running" | grep -q "backend"; then
               check_service "backend" "5000" "/api/health" || true
             fi
-
-      - name: Copy deployment files
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          port: ${{ secrets.SERVER_SSH_PORT }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          source: "docker-compose.yml,deploy.sh"
-          target: ${{ secrets.DOCKER_COMPOSE_DIR }}
-          overwrite: true
-
       - name: Run database migrations
         if: needs.analyze.outputs.backend_changed == 'true'
         uses: appleboy/ssh-action@v1.0.3
@@ -321,7 +318,6 @@ jobs:
             else
               echo "⚠️ No migrations needed or backend not ready"
             fi
-
       - name: Cleanup
         if: always()
         uses: appleboy/ssh-action@v1.0.3

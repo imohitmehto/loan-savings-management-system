@@ -20,8 +20,8 @@ RUN npm ci
 COPY . .
 # Generate Prisma client
 RUN npm run prisma:generate
-# Build the application using npx to ensure nest CLI is available
-RUN npx nest build && npm run copy:templates
+# Build
+RUN npm run build
 
 # ===== RUNTIME =====
 FROM base AS runtime

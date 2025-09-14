@@ -1,5 +1,5 @@
 # ===== BASE IMAGE =====
-FROM node:18.19-alpine3.18 AS base
+FROM node:20-alpine3.18 AS base
 WORKDIR /app
 ENV NODE_ENV=production
 # Ensure system packages are up to date
@@ -15,12 +15,13 @@ RUN npm ci --omit=dev
 FROM base AS builder
 WORKDIR /app
 COPY package*.json ./
+# Install ALL dependencies (including devDependencies) for building
 RUN npm ci
 COPY . .
 # Generate Prisma client
 RUN npm run prisma:generate
-# Build the application
-RUN npm run build
+# Build the application using npx to ensure nest CLI is available
+RUN npx nest build && npm run copy:templates
 
 # ===== RUNTIME =====
 FROM base AS runtime

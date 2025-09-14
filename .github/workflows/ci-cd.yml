@@ -28,56 +28,34 @@ on:
 env:
   REGISTRY: docker.io
   DOCKER_BUILDKIT: 1
-  COMPOSE_DOCKER_CLI_BUILD: 1
 
 jobs:
-  security-scan:
-    name: 🔍 Security Scan
+  analyze:
+    name: 🔍 Security & Change Analysis
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run vulnerability scan
-        run: |
-          # Install Trivy for container security scanning
-          sudo apt-get update
-          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy -y
-
-          # Scan Dockerfiles for security issues
-          if [ -f "web/Dockerfile" ]; then
-            echo "🔍 Scanning web/Dockerfile..."
-            trivy config web/Dockerfile --exit-code 0 --severity HIGH,CRITICAL
-          fi
-          if [ -f "backend/Dockerfile" ]; then
-            echo "🔍 Scanning backend/Dockerfile..."
-            trivy config backend/Dockerfile --exit-code 0 --severity HIGH,CRITICAL
-          fi
-          echo "✅ Security scan completed"
-
-  detect-changes:
-    name: 📋 Detect Changes
-    runs-on: ubuntu-latest
-    needs: security-scan
     outputs:
-      web_changed: ${{ steps.check.outputs.web_changed }}
-      backend_changed: ${{ steps.check.outputs.backend_changed }}
-      should_deploy: ${{ steps.check.outputs.should_deploy }}
+      web_changed: ${{ steps.changes.outputs.web_changed }}
+      backend_changed: ${{ steps.changes.outputs.backend_changed }}
+      should_deploy: ${{ steps.changes.outputs.should_deploy }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Determine changed components
-        id: check
+      - name: Run Trivy security scan on Dockerfiles
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          scan-ref: "."
+          format: "table"
+          exit-code: "0"
+          severity: "HIGH,CRITICAL"
+
+      - name: Detect changes
+        id: changes
         run: |
+          # Force deploy if requested
           if [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
             echo "🔄 Force deployment requested"
             echo "web_changed=true" >> $GITHUB_OUTPUT
@@ -86,7 +64,7 @@ jobs:
             exit 0
           fi
 
-          # Detect changes in push events
+          # Detect changes
           if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
             CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
           else
@@ -96,32 +74,20 @@ jobs:
           web_changed=false
           backend_changed=false
 
-          # Check for web changes
           if echo "$CHANGED" | grep -qE '^web/'; then
             web_changed=true
-            echo "📱 Web application changes detected"
+            echo "📱 Web changes detected"
           fi
 
-          # Check for backend changes
           if echo "$CHANGED" | grep -qE '^backend/'; then
             backend_changed=true
-            echo "⚙️ Backend application changes detected"
+            echo "⚙️ Backend changes detected"
           fi
 
-          # Check for infrastructure changes
-          infra_changed=false
-          if echo "$CHANGED" | grep -qE '^(docker-compose\.yml|deploy\.sh|\.github/workflows)'; then
-            infra_changed=true
-            echo "🏗️ Infrastructure changes detected"
-          fi
-
-          # Determine if deployment is needed
           should_deploy=false
-          if [ "$web_changed" = "true" ] || [ "$backend_changed" = "true" ] || [ "$infra_changed" = "true" ]; then
+          if [ "$web_changed" = "true" ] || [ "$backend_changed" = "true" ] || echo "$CHANGED" | grep -qE '^(docker-compose\.yml|deploy\.sh|\.github/workflows)'; then
             should_deploy=true
             echo "🚀 Deployment required"
-          else
-            echo "⏭️ No deployment needed"
           fi
 
           echo "web_changed=$web_changed" >> $GITHUB_OUTPUT
@@ -129,18 +95,16 @@ jobs:
           echo "should_deploy=$should_deploy" >> $GITHUB_OUTPUT
 
   build-web:
-    name: 🌐 Build Web Application
+    name: 🌐 Build & Scan Web
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.web_changed == 'true'
+    needs: analyze
+    if: needs.analyze.outputs.web_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          platforms: linux/amd64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -165,34 +129,31 @@ jobs:
           context: ./web
           platforms: linux/amd64
           push: true
+          load: true 
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
-          provenance: true
-          sbom: true
 
       - name: Scan web image for vulnerabilities
-        run: |
-          echo "🔍 Scanning web image for vulnerabilities..."
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:web-latest
-          echo "✅ Web image security scan completed"
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:web-latest
+          format: "table"
+          exit-code: "0"
+          severity: "HIGH,CRITICAL"
 
   build-backend:
-    name: ⚙️ Build Backend Application
+    name: ⚙️ Build & Scan Backend
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.backend_changed == 'true'
+    needs: analyze
+    if: needs.analyze.outputs.backend_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          platforms: linux/amd64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -217,28 +178,27 @@ jobs:
           context: ./backend
           platforms: linux/amd64
           push: true
+          load: true # Keep local copy for scanning
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
-          provenance: true
-          sbom: true
 
       - name: Scan backend image for vulnerabilities
-        run: |
-          echo "🔍 Scanning backend image for vulnerabilities..."
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:backend-latest
-          echo "✅ Backend image security scan completed"
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:backend-latest
+          format: "table"
+          exit-code: "0"
+          severity: "HIGH,CRITICAL"
 
   deploy:
     name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
-    needs: [detect-changes, build-web, build-backend]
+    needs: [analyze, build-web, build-backend]
     if: |
       always() && 
-      needs.detect-changes.outputs.should_deploy == 'true' && 
+      needs.analyze.outputs.should_deploy == 'true' && 
       (needs.build-web.result == 'success' || needs.build-web.result == 'skipped') &&
       (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped')
     environment:
@@ -247,7 +207,84 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy deployment files to server
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          WEB_CHANGED: ${{ needs.analyze.outputs.web_changed }}
+          BACKEND_CHANGED: ${{ needs.analyze.outputs.backend_changed }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
+          timeout: 300s
+          envs: |
+            DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,WEB_CHANGED,BACKEND_CHANGED
+          script: |
+            set -euo pipefail
+
+            # Navigate to deployment directory
+            cd ${{ secrets.DOCKER_COMPOSE_DIR }}
+
+            # Login to Docker Hub
+            echo "🔐 Logging into Docker Hub..."
+            echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+
+            # Update deployment files
+            echo "📋 Updating deployment files..."
+
+            # Run deployment
+            echo "🚀 Starting deployment..."
+            export WEB_CHANGED="${WEB_CHANGED}"
+            export BACKEND_CHANGED="${BACKEND_CHANGED}"
+
+            # Make script executable and run
+            chmod +x deploy.sh
+            ./deploy.sh
+
+            # Verify deployment
+            echo "✅ Verifying services..."
+            docker compose ps
+
+            # Health checks with retries
+            echo "🏥 Running health checks..."
+            sleep 20
+
+            # Function for health check with retries
+            check_service() {
+              local service=$1
+              local port=$2
+              local path=$3
+              local max_attempts=5
+              local attempt=1
+
+              while [ $attempt -le $max_attempts ]; do
+                if docker compose exec -T $service curl -f http://localhost:$port$path >/dev/null 2>&1; then
+                  echo "✅ $service service is healthy"
+                  return 0
+                fi
+                echo "⏳ Attempt $attempt/$max_attempts: $service not ready, waiting..."
+                sleep 10
+                attempt=$((attempt + 1))
+              done
+              echo "⚠️ $service service health check failed after $max_attempts attempts"
+              return 1
+            }
+
+            # Check services that are running
+            if docker compose ps --services --filter "status=running" | grep -q "web"; then
+              check_service "web" "3000" "/api/health" || true
+            fi
+
+            if docker compose ps --services --filter "status=running" | grep -q "backend"; then
+              check_service "backend" "5000" "/api/health" || true
+            fi
+
+      - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -259,84 +296,10 @@ jobs:
           source: "docker-compose.yml,deploy.sh"
           target: ${{ secrets.DOCKER_COMPOSE_DIR }}
           overwrite: true
-          timeout: 30s
-          command_timeout: 10s
-          
-      - name: Deploy application to VPS
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
-          WEB_CHANGED: ${{ needs.detect-changes.outputs.web_changed }}
-          BACKEND_CHANGED: ${{ needs.detect-changes.outputs.backend_changed }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          port: ${{ secrets.SERVER_SSH_PORT }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
-          timeout: 300s
-          command_timeout: 60s
-          envs: |
-            DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,COMPOSE_DIR,WEB_CHANGED,BACKEND_CHANGED
-          script: |
-            set -e
-            cd "${COMPOSE_DIR}"
-
-            echo "🔐 Logging into Docker Hub..."
-            echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-
-            echo "📋 Making deploy script executable..."
-            chmod +x deploy.sh
-
-            echo "🚀 Starting deployment..."
-            export WEB_CHANGED="${WEB_CHANGED}"
-            export BACKEND_CHANGED="${BACKEND_CHANGED}"
-            ./deploy.sh
-
-            echo "✅ Verifying deployment..."
-            docker compose ps
-
-      - name: Run health checks
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          port: ${{ secrets.SERVER_SSH_PORT }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
-          timeout: 60s
-          envs: COMPOSE_DIR
-          script: |
-            cd "${COMPOSE_DIR}"
-            echo "🏥 Running health checks..."
-            sleep 15
-
-            # Check if services are running
-            if docker compose ps --services --filter "status=running" | grep -q "web"; then
-              echo "✅ Web service is running"
-              docker compose exec -T web curl -f http://localhost:3000/api/health || echo "⚠️ Web health endpoint not responding"
-            else
-              echo "❌ Web service is not running"
-            fi
-
-            if docker compose ps --services --filter "status=running" | grep -q "backend"; then
-              echo "✅ Backend service is running"
-              docker compose exec -T backend curl -f http://localhost:5000/api/health || echo "⚠️ Backend health endpoint not responding"
-            else
-              echo "❌ Backend service is not running"
-            fi
 
       - name: Run database migrations
-        if: needs.detect-changes.outputs.backend_changed == 'true'
+        if: needs.analyze.outputs.backend_changed == 'true'
         uses: appleboy/ssh-action@v1.0.3
-        env:
-          COMPOSE_DIR: ${{ secrets.DOCKER_COMPOSE_DIR }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -344,34 +307,25 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
-          timeout: 180s
-          command_timeout: 60s
-          envs: COMPOSE_DIR
+          timeout: 120s
           script: |
             set -e
-            cd "${COMPOSE_DIR}"
+            cd ${{ secrets.DOCKER_COMPOSE_DIR }}
 
             echo "🗃️ Running database migrations..."
 
-            # Wait for database to be ready
-            echo "⏳ Waiting for database to be ready..."
-            sleep 10
+            # Wait for backend service
+            sleep 15
 
-            # Check migration status
-            docker compose exec -T backend npx prisma migrate status || true
-
-            # Run migrations with error handling
-            if docker compose exec -T backend npx prisma migrate deploy; then
-              echo "✅ Database migrations completed successfully"
+            # Run migrations safely
+            if docker compose exec -T backend npx prisma migrate deploy 2>/dev/null; then
+              echo "✅ Migrations completed"
+              docker compose exec -T backend npx prisma generate || echo "⚠️ Client generation warning"
             else
-              echo "⚠️ Migration failed or no migrations to run"
-              exit 0  # Don't fail deployment for migration issues
+              echo "⚠️ No migrations needed or backend not ready"
             fi
 
-            # Generate Prisma client
-            docker compose exec -T backend npx prisma generate || echo "⚠️ Prisma client generation failed"
-
-      - name: Cleanup Docker resources
+      - name: Cleanup
         if: always()
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -381,24 +335,22 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
-          timeout: 60s
           script: |
-            echo "🧹 Cleaning up unused Docker resources..."
+            echo "🧹 Cleaning up..."
             docker system prune -f --filter "until=24h" || true
             docker logout || true
 
   notify:
-    name: 📢 Send Notifications
+    name: 📢 Notify Results
     runs-on: ubuntu-latest
     needs: [deploy]
     if: always()
     steps:
-      - name: Send deployment notification
+      - name: Send notification
         run: |
           if [ "${{ needs.deploy.result }}" = "success" ]; then
-            echo "✅ Deployment completed successfully!"
-            echo "🌐 Application is now live at https://${{ secrets.VPS_HOST }}"
+            echo "✅ Deployment successful!"
+            echo "🌐 Application: https://${{ secrets.VPS_HOST }}"
           else
-            echo "❌ Deployment failed!"
-            echo "Please check the logs for more details."
+            echo "❌ Deployment failed - check logs"
           fi

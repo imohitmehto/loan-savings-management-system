@@ -1,5 +1,5 @@
 # ===== BASE =====
-FROM node:18.19-alpine3.18 AS base
+FROM node:20-alpine3.18 AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN apk add --no-cache libc6-compat curl

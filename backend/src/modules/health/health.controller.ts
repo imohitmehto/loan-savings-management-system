@@ -17,26 +17,19 @@ export class HealthController {
     private memory: MemoryHealthIndicator,
     private disk: DiskHealthIndicator,
     private db: PrismaHealthIndicator,
-  ) {}
+  ) { }
 
   @Get()
   @Public()
   @HealthCheck()
   check() {
     return this.health.check([
-      // Basic HTTP ping check
-      () => this.http.pingCheck("nestjs", "http://localhost:3000"),
-
-      // Database connectivity check
       () => this.db.pingCheck("database"),
 
-      // Memory usage check (150MB heap limit)
       () => this.memory.checkHeap("memory_heap", 150 * 1024 * 1024),
 
-      // RSS memory check (300MB limit)
       () => this.memory.checkRSS("memory_rss", 300 * 1024 * 1024),
 
-      // Disk storage check (90% threshold)
       () =>
         this.disk.checkStorage("storage", {
           thresholdPercent: 0.9,
